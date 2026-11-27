@@ -68,7 +68,7 @@ h2{margin:0 0 8px}p{line-height:1.45}
 <h1>Мёртвая зима</h1>
 <p>Россия, после катастрофы. Посёлок занесло снегом, а по улицам бродят заражённые. Ешь, пей, грейся, мастери оружие и переживи как можно больше ночей.</p>
 <p class="touchtext"><b>Управление:</b> веди пальцем в левой нижней части экрана, чтобы идти. Веди по остальному экрану, чтобы смотреть. «УДАР» можно держать и одновременно тянуть пальцем для прицеливания. «Бег» включается и выключается касанием. Удобнее играть, повернув телефон горизонтально.</p>
-<p class="desk"><b>Компьютер:</b> WASD — ходьба, Shift — бег, пробел — прыжок, мышь — обзор (если курсор не захватился, веди с зажатой кнопкой), клик — удар или выстрел, E — взять, R — зарядить, 1–4 — оружие, C — крафт, I — рюкзак, Esc или P — пауза.</p>
+<p class="desk"><b>Компьютер:</b> WASD — ходьба, Shift — бег, пробел — прыжок, мышь — обзор (если курсор не захватился, веди с зажатой кнопкой), клик — удар или выстрел, E — взять, R — зарядить, 1–6 — оружие, C — крафт, I — рюкзак, Esc или P — пауза.</p>
 <p>Стреляй и руби по конечностям: без ног враг ползёт, без рук бьёт слабее, без головы падает. Костёр согревает и кипятит воду. Игра содержит много крови и расчленёнку (18+).</p>
 <button class="go" id="start">Начать выживать</button> <button id="gfxBtn">Настройки графики</button>
 <p><label><input type="checkbox" id="gore" checked> Кровь и расчленёнка</label></p>
@@ -97,7 +97,7 @@ precision mediump float;
 function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error('Шейдер: '+gl.getShaderInfoLog(o));return o}
 function prog(v,f,names){const p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,v));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,HP+f));gl.bindAttribLocation(p,0,'a');gl.bindAttribLocation(p,1,'n');gl.bindAttribLocation(p,2,'ac');gl.bindAttribLocation(p,3,'ag');gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error('Программа: '+gl.getProgramInfoLog(p));const u={prg:p};for(const k of names.split(' '))u[k]=gl.getUniformLocation(p,k);return u}
 const MAIN=prog(`attribute vec3 a,n;attribute vec4 ac;attribute float ag;uniform vec3 p,s,col;uniform float mat,glow,baked;uniform mat3 R;uniform mat4 VP;uniform float loc;varying vec3 N,W,T,TN;varying vec4 VC;varying float VG;
-void main(){VC=mix(vec4(col,mat),ac,baked);VG=mix(glow,ag,baked);vec3 l=a*s;W=p+R*l;N=R*(n/s);T=mix(W,l+vec3(3.1,7.7,1.3),loc);TN=mix(N,n/s,loc);gl_Position=VP*vec4(W,1.);}`,
+void main(){VC=mix(vec4(col,mat),ac,baked);VG=mix(glow,ag,baked);vec3 l=a*s;W=p+R*l;N=R*(n/s);float lk=min(loc,1.);T=mix(W,l*loc+vec3(3.1,7.7,1.3),lk);TN=mix(N,n/s,lk);gl_Position=VP*vec4(W,1.);}`,
 `uniform vec3 fog,eye,sun,sunCol,ambSky,ambGnd,lamp;varying vec4 VC;varying float VG;uniform float detail,shOn,texel,bright,far;uniform vec4 fire;uniform sampler2D smap;uniform mat4 LVP;varying vec3 N,W,T,TN;
 float h(vec3 p){p=fract(p*.3183099+vec3(.1,.17,.13));p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float vn(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
@@ -119,6 +119,9 @@ else if(m==7){c*=.86+.18*vn(T*7.)+.12*vn(T*23.);c=mix(c,c*vec3(.82,.74,.68),smoo
 else if(m==8){c*=.65+.5*vn(T*6.)+.15*fine;spec=.55;pw=48.;}
 else if(m==9){vec3 rf=reflect(-V,nn);c=mix(c,fog*.9,clamp(.25+rf.y*.8,0.,.7))*(.8+.3*vn(T*1.7));spec=.8;pw=80.;}
 else if(m==10){c*=.85+.2*mid+.1*fine;spec=1.3;pw=22.;}
+else if(m==12){c*=.9+.12*mid+.1*fine;float wr=smoothstep(.66,.82,vn(T*2.1)*.6+vn(T*8.)*.4);c=mix(c,vec3(.5,.5,.52),wr*.55);spec=.55+wr*.5;pw=34.;}
+else if(m==13){float g_=vn(vec3(T.x*9.,T.y*9.,T.z*.9));float g2=vn(vec3(T.x*22.,T.y*22.,T.z*2.2));c*=.62+.5*g_+.22*g2;spec=.3;pw=30.;}
+else if(m==14){float br=vn(vec3(T.x*3.,T.y*26.,T.z*1.4));c*=.86+.2*br+.08*fine;spec=1.1;pw=52.;}
 else if(m==11){c*=.55+.55*vn(T*9.)+.2*fine;c=mix(c,vec3(.62,.68,.72),smoothstep(.45,.8,up)*smoothstep(.3,.7,mid));}
 }
 vec3 al=pow(max(c,0.),vec3(2.2))*(1.+.35*step(6.5,mat)*step(mat,7.5));
@@ -164,13 +167,33 @@ surf(12,1,(u,v)=>{const a=u*6.2832,r=(1-v)*.5;return[Math.cos(a)*r,v-.5,Math.sin
 for(const[a,b,n]of[[A,T,[-.894,.447,0]],[T,B,[.894,.447,0]],[B,A,[0,-1,0]]]){q(a,-.5,n);q(b,-.5,n);q(b,.5,n);q(a,-.5,n);q(b,.5,n);q(a,.5,n)}
 for(const z of[-.5,.5])for(const p of[A,B,T])q(p,z,[0,0,z*2]);mesh(V)}  /* 5 крыша */
 mesh([-1,-1,0,0,0,1, 3,-1,0,0,0,1, -1,3,0,0,0,1]);const SKYM=6;
+/* контур [z,y] в метрах, вытянутый по x на толщину th */
+function shape(P2,th){const V=[],area=P2.reduce((s,p,i)=>{const q=P2[(i+1)%P2.length];return s+p[0]*q[1]-q[0]*p[1]},0),pts=area<0?[...P2].reverse():P2,idx=pts.map((_,i)=>i);
+const cr=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);let guard=200;
+while(idx.length>2&&guard--){for(let i=0;i<idx.length;i++){const A=pts[idx[(i+idx.length-1)%idx.length]],B=pts[idx[i]],Cc=pts[idx[(i+1)%idx.length]];if(cr(A,B,Cc)<=0)continue;
+if(idx.some(j=>{const p=pts[j];return p!==A&&p!==B&&p!==Cc&&cr(A,B,p)>=0&&cr(B,Cc,p)>=0&&cr(Cc,A,p)>=0}))continue;
+for(const x of[-th/2,th/2])for(const p of[A,B,Cc])V.push(x,p[1],p[0],Math.sign(x),0,0);idx.splice(i,1);break}}
+for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],dz=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dz,dy)||1,n=[0,-dz/l,dy/l];
+for(const[p,x]of[[a,-1],[b,-1],[b,1],[a,-1],[b,1],[a,1]])V.push(x*th/2,p[1],p[0],...n)}
+mesh(V);return MESH.length-1}
+const SH={
+knife:shape([[0,-.022],[-.17,-.024],[-.215,-.012],[-.255,.016],[-.19,.016],[-.17,.025],[0,.025]],.007),
+knifeEdge:shape([[0,-.023],[-.17,-.025],[-.215,-.013],[-.255,.016],[-.212,-.004],[-.17,-.014],[0,-.012]],.009),
+mach:shape([[0,-.02],[-.14,-.028],[-.32,-.05],[-.43,-.045],[-.47,-.015],[-.45,.03],[-.36,.033],[0,.022]],.007),
+machEdge:shape([[0,-.021],[-.14,-.029],[-.32,-.051],[-.43,-.046],[-.47,-.015],[-.425,-.033],[-.32,-.038],[-.14,-.018],[0,-.012]],.009),
+axe:shape([[.04,.028],[-.03,.03],[-.075,.048],[-.13,.068],[-.14,-.01],[-.125,-.085],[-.075,-.052],[-.03,-.03],[.04,-.028]],.026),
+axeEdge:shape([[-.117,.062],[-.15,.072],[-.164,-.008],[-.145,-.092],[-.112,-.078],[-.13,-.008]],.01),
+stock:shape([[0,.024],[.1,.012],[.285,.006],[.3,-.105],[.255,-.11],[.11,-.048],[0,-.036]],.036),
+obStock:shape([[0,.03],[.07,.012],[.125,-.03],[.175,-.105],[.125,-.128],[.075,-.07],[.03,-.04],[0,-.032]],.04)};
 gl.enableVertexAttribArray(0);gl.enableVertexAttribArray(1);
 let curMesh=-1,U=MAIN,depthPass=false,localTex=1,lastMat=-1;
 function bind(i){if(i===curMesh)return;curMesh=i;gl.bindBuffer(gl.ARRAY_BUFFER,MESH[i].b);gl.vertexAttribPointer(0,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(1,3,gl.FLOAT,false,24,12)}
-const M=new Float32Array(9);
+const M=new Float32Array(9),M2=new Float32Array(9);let TF=null;
 function box(x,y,z,sx,sy,sz,c,yaw=0,pit=0,glow=0,me=0,mt=0){if(depthPass&&glow>.5)return;const a=Math.cos(yaw),b=Math.sin(yaw),e=Math.cos(pit),f=Math.sin(pit);
-M[0]=a;M[1]=0;M[2]=-b;M[3]=b*f;M[4]=e;M[5]=a*f;M[6]=b*e;M[7]=-f;M[8]=a*e;
-bind(me);gl.uniformMatrix3fv(U.R,false,M);gl.uniform3f(U.p,x,y,z);gl.uniform3f(U.s,sx,sy,sz);
+M[0]=a;M[1]=0;M[2]=-b;M[3]=b*f;M[4]=e;M[5]=a*f;M[6]=b*e;M[7]=-f;M[8]=a*e;let MM=M;
+if(TF){const T_=TF.m,dx=x-TF.px,dy=y-TF.py,dz=z-TF.pz;x=TF.ox+T_[0]*dx+T_[3]*dy+T_[6]*dz;y=TF.oy+T_[1]*dx+T_[4]*dy+T_[7]*dz;z=TF.oz+T_[2]*dx+T_[5]*dy+T_[8]*dz;
+for(let c_=0;c_<3;c_++)for(let r_=0;r_<3;r_++)M2[c_*3+r_]=T_[r_]*M[c_*3]+T_[3+r_]*M[c_*3+1]+T_[6+r_]*M[c_*3+2];MM=M2}
+bind(me);gl.uniformMatrix3fv(U.R,false,MM);gl.uniform3f(U.p,x,y,z);gl.uniform3f(U.s,sx,sy,sz);
 if(!depthPass){gl.uniform3fv(U.col,c);gl.uniform1f(U.glow,glow);gl.uniform1f(U.mat,mt);gl.uniform1f(U.loc,localTex)}gl.drawArrays(gl.TRIANGLES,0,MESH[me].n)}
 /* неподвижный мир запекается в крупные куски: мало вызовов отрисовки */
 let chunks=[];
@@ -249,9 +272,11 @@ function blocked(x,z,r){if(Math.abs(x)>SIZE-r||Math.abs(z)>SIZE-r)return true;re
 function move(o,dx,dz,r){if(!blocked(o.x+dx,o.z,r))o.x+=dx;if(!blocked(o.x,o.z+dz,r))o.z+=dz}
 /* ---------- состояние ---------- */
 let P,inv,en,gibs,drops,blood,decals,fires,flakes,time,day,kills,run=false,paused=true,spawnT,shake=0,flash=0,cd=0,swing=0,msgT=0,gore=true;
-const WN=['Нож','Топор','ПМ','Обрез'];
-function reset(){build();P={x:0,z:4,y:0,vy:0,yaw:0,pit:0,hp:100,food:80,water:75,warm:90,st:100,w:0,own:[1,0,0,0],mag:[0,0,0,0],bob:0};
-inv={wood:3,metal:1,cloth:2,can:1,bread:1,dirty:1,clean:1,bandage:1,a9:0,shot:0};
+const WN=['Нож','Топор','ПМ','Обрез','Мачете','АК-74'],ORDER=[0,4,1,2,3,5],AMMO={2:'a9',3:'shot',5:'a545'},MAGMAX={2:8,3:2,5:30},melee=w=>!AMMO[w];
+let corpses=[],shells=[],rec=0,equip=0,lastW=0,reloadT=0,reloadDur=1.4,swingRate=4,swingSide=1;
+function reset(){build();P={x:0,z:4,y:0,vy:0,yaw:0,pit:0,hp:100,food:80,water:75,warm:90,st:100,w:0,own:[1,0,0,0,0,0],mag:[0,0,0,0,0,0],bob:0};
+inv={wood:3,metal:1,cloth:2,can:1,bread:1,dirty:1,clean:1,bandage:1,a9:0,shot:0,a545:0};
+corpses=[];shells=[];rec=0;reloadT=0;equip=0;lastW=0;
 en=[];gibs=[];drops=[];blood=[];decals=[];fires=[];flakes=[...Array(600)].map(()=>[R(-15,15),R(0,9),R(-15,15)]);
 time=.3;day=1;kills=0;spawnT=6;for(let i=0;i<5;i++)spawn(22,45)}
 function say(t){$('msg').textContent=t;msgT=3}
@@ -272,34 +297,48 @@ function gib(p,s,c,sp=4){if(gore&&gibs.length<120)gibs.push({x:p[0],y:p[1],z:p[2
 function sever(e,q){if(!q.on||q.n==='body')return;const p=wpos(e,q);q.on=0;gib(p,q.s,q.c);gib(p,[.1,.1,.1],C(0xd8cfc0));for(let i=0;i<4;i++)gib(p,[R(.06,.15),R(.05,.1),R(.06,.15)],C(0x7a0b0d),3);
 bleed(...p,45,4);splat(p[0],p[2],R(.7,1.4));e.bleed+=3;snd(500,.3,.5,true);
 if(q.n==='head'){e.hp=0;say('Голова с плеч!')}else if(q.n.startsWith('leg'))say(legs(e)?'Нога отрублена!':'Без ног — ползёт!');else say('Рука отлетела!')}
-function die(e){const i=en.indexOf(e);if(i<0)return;en.splice(i,1);kills++;
+function loot_(e){const r=Math.random();drops.push({x:e.x,z:e.z,t:r<.18?'can':r<.3?'a9':r<.39?'shot':r<.46?'a545':r<.6?'dirty':r<.85?'cloth':'metal'})}
+function die(e,calm){const i=en.indexOf(e);if(i<0)return;en.splice(i,1);kills++;loot_(e);
+if(calm){/* тело падает целиком */
+const dir=Math.random()<.75?-1:1,m=e.m;corpses.push({e,k:0,v:.25,dir,t:60,pool:null});if(corpses.length>14)corpses.shift();e.dead=1;snd(80,.45,.2);return}
 for(const q of e.parts)if(q.on){const p=wpos(e,q);gib(p,q.s,q.c,2);bleed(...p,10,3)}
 for(let k=0;k<10;k++)gib([e.x,1,e.z],[R(.07,.2),R(.06,.14),R(.07,.2)],C(k%4?0x720a0c:0xa8434a),3.5);
-for(let k=0;k<7;k++)splat(e.x+R(-1.2,1.2),e.z+R(-1.2,1.2),R(.5,1.6));
-const r=Math.random();drops.push({x:e.x,z:e.z,t:r<.2?'can':r<.35?'a9':r<.45?'shot':r<.6?'dirty':r<.85?'cloth':'metal'});snd(70,.5,.25)}
+for(let k=0;k<7;k++)splat(e.x+R(-1.2,1.2),e.z+R(-1.2,1.2),R(.5,1.6));snd(70,.5,.25)}
+function updateCorpses(dt){for(const c of corpses){c.t-=dt;if(c.k<1){c.v+=dt*5.5;c.k=Math.min(1,c.k+c.v*dt);if(c.k===1){snd(160,.2,.25,true);
+if(gore){const e=c.e,d=(legs(e)?c.dir*.95:.5)*e.m,x=e.x+Math.sin(e.yaw)*d,z=e.z+Math.cos(e.yaw)*d;c.pool=[x,.047+Math.random()*.004,z,.2,.008,.17,C(0x4a0305),R(0,3)];c.max=R(1.1,1.7)}}}
+if(c.pool&&c.pool[3]<c.max){c.pool[3]+=dt*.22;c.pool[5]+=dt*.18}}corpses=corpses.filter(c=>c.t>0)}
 /* луч против сфер частей тела */
 function ray(dir,ex,ey,ez,range){let best=null,bd=range;for(const e of en)for(const q of e.parts){if(!q.on)continue;const p=wpos(e,q);
 const lx=p[0]-ex,ly=p[1]-ey,lz=p[2]-ez,t=lx*dir[0]+ly*dir[1]+lz*dir[2];if(t<0||t>bd)continue;
 const d2=lx*lx+ly*ly+lz*lz-t*t;const rad=(q.n==='body'?.4:q.n==='head'?.27:.26)*e.m;if(d2<rad*rad){best={e,q,p};bd=t}}
 if(best){for(let t=.5;t<bd-.5;t+=.4){const x=ex+dir[0]*t,y=ey+dir[1]*t,z=ez+dir[2]*t;if(y<2.8&&solids.some(s=>x>s[0]&&x<s[2]&&z>s[1]&&z<s[3]&&(s[2]-s[0])>.5))return null}}return best}
-function damage(h,d,cut){const{e,q,p}=h;e.stun=.2;bleed(...p,14,2.5);splat(p[0]+R(-.5,.5),p[2]+R(-.5,.5),R(.2,.6));snd(900,.12,.3,true);
+function damage(h,d,cut,gun){const{e,q,p}=h;e.stun=.2;bleed(...p,gun?9:14,gun?1.8:2.5);splat(p[0]+R(-.5,.5),p[2]+R(-.5,.5),R(.2,.6));snd(900,.12,.3,true);
+if(gun){/* пули оставляют раны, но не отрывают части */
+if(gore){(e.holes||(e.holes=[])).push({n:q.n,x:R(-.35,.35),y:R(-.32,.32)});if(e.holes.length>14)e.holes.shift()}
+if(q.n==='head'){e.hp-=d*3.2;say('В голову!')}else if(q.n==='body')e.hp-=d;else{e.hp-=d*.55;if(q.n.startsWith('leg')){e.limp=1;e.stun=.45}}
+if(e.hp<=0)die(e,true);return}
 if(q.n==='body')e.hp-=d;else{q.hp-=d*cut;e.hp-=d*.35;if(q.hp<=0)sever(e,q)}if(e.hp<=0)die(e)}
 function look(sx=0,sy=0){const y=P.yaw+sx,p=P.pit+sy;return[-Math.sin(y)*Math.cos(p),Math.sin(p),-Math.cos(y)*Math.cos(p)]}
+const MELEE={0:{d:19,cut:1,reach:2.3,cd:.38,st:7},1:{d:42,cut:1.6,reach:2.8,cd:.72,st:14},4:{d:30,cut:1.9,reach:2.65,cd:.5,st:10}};
+const GUN={2:{d:36,n:1,sp:.008,range:45,cd:.28,kick:.025,sh:.12,f:2500,len:.22},3:{d:17,n:9,sp:.07,range:18,cd:.9,kick:.07,sh:.3,f:1100,len:.5},5:{d:29,n:1,sp:.016,range:55,cd:.11,kick:.012,sh:.1,f:1900,len:.16}};
 function attack(){if(cd>0||paused)return;const w=P.w,eye=1.65+P.y;
-if(w<2){if(P.st<8)return;P.st-=w?14:7;cd=w?.7:.38;swing=1;snd(1800,.15,.15,true);
-const reach=w?2.8:2.3;let h=null;for(const o of[0,-.12,.12,-.24,.24]){for(const v of[0,-.2,-.45]){h=ray(look(o,v),P.x,eye,P.z,reach);if(h)break}if(h)break}
-if(h){damage(h,w?42:19,w?1.6:1);shake=.1}else chop(w)}
-else{if(!P.mag[w]){const k=w===2?'a9':'shot';if(inv[k])reload();else{say('Нет патронов. Скрафти или ищи.');cd=.4}return}
-P.mag[w]--;cd=w===2?.28:.9;flash=.07;shake=w===2?.12:.3;snd(w===2?2500:1100,w===2?.22:.5,.6,true);
-const n=w===2?1:9,sp=w===2?.008:.07;for(let i=0;i<n;i++){const h=ray(look(R(-sp,sp),R(-sp,sp)),P.x,eye,P.z,w===2?45:18);if(h)damage(h,w===2?36:17,w===2?1.1:1.5)}
-P.pit=Math.min(1.4,P.pit+(w===2?.025:.07));for(const e of en)e.alert=1}}
-function reload(){const w=P.w;if(w<2)return;const k=w===2?'a9':'shot',max=w===2?8:2,n=Math.min(max-P.mag[w],inv[k]);if(n<=0){say(inv[k]?'Уже заряжено':'Нет патронов');return}P.mag[w]+=n;inv[k]-=n;cd=1.1;snd(300,.15,.2);say('Перезарядка')}
+if(melee(w)){const m=MELEE[w];if(P.st<m.st+1)return;P.st-=m.st;cd=m.cd;swing=1;swingRate=1/(m.cd*.92);swingSide=w===1?1:-swingSide;snd(1800,.15,.15,true);
+let h=null;for(const o of[0,-.12,.12,-.24,.24]){for(const v of[0,-.2,-.45]){h=ray(look(o,v),P.x,eye,P.z,m.reach);if(h)break}if(h)break}
+if(h){damage(h,m.d,m.cut,false);shake=.1}else chop(w)}
+else{const g=GUN[w];if(!P.mag[w]){if(inv[AMMO[w]])reload();else{say('Нет патронов. Скрафти или ищи.');cd=.4}return}
+P.mag[w]--;cd=g.cd;flash=.055;shake=g.sh;rec=Math.min(1.4,rec+(w===5?.55:1));snd(g.f,g.len,.55,true);
+if(w!==3)shells.push({x:.04,y:.02,z:0,vx:R(.7,1.2),vy:R(.7,1.3),vz:R(-.2,.3),a:R(0,6),t:.55});
+for(let i=0;i<g.n;i++){const h=ray(look(R(-g.sp,g.sp),R(-g.sp,g.sp)),P.x,eye,P.z,g.range);if(h)damage(h,g.d,0,true)}
+P.pit=Math.min(1.4,P.pit+g.kick);for(const e of en)e.alert=1}}
+function reload(){const w=P.w;if(melee(w)||reloadT>0)return;const k=AMMO[w],max=MAGMAX[w],n=Math.min(max-P.mag[w],inv[k]);if(n<=0){say(inv[k]?'Уже заряжено':'Нет патронов');return}P.mag[w]+=n;inv[k]-=n;reloadDur=w===5?1.9:1.4;reloadT=reloadDur;cd=reloadDur;snd(300,.15,.2);setTimeout(()=>snd(700,.08,.2,true),reloadDur*650);say('Перезарядка')}
 function front(n,d){const dx=n.x-P.x,dz=n.z-P.z,l=Math.hypot(dx,dz);return l<d&&(-Math.sin(P.yaw)*dx-Math.cos(P.yaw)*dz)/(l||1)>.5}
-function chop(w){const n=nodes.find(n=>n.t==='tree'&&front(n,2.4));if(!n||n.hp<=0)return;const g=w?3:1;inv.wood+=g;n.hp-=w?1:.5;snd(400,.15,.4,true);say(n.hp<=0?`Дрова +${g}. Дерево обобрано.`:`Дрова +${g}`)}
-const NAMES={wood:'Дрова',metal:'Металл',cloth:'Тряпки',can:'Тушёнка',bread:'Сухари',dirty:'Грязная вода',clean:'Чистая вода',bandage:'Бинт',a9:'Патроны 9 мм',shot:'Дробь'};
-function target(){let n=drops.find(d=>Math.hypot(d.x-P.x,d.z-P.z)<2);if(n)return{label:'Подобрать: '+NAMES[n.t],go(){const k=n.t==='a9'?4:n.t==='shot'?2:1;inv[n.t]+=k;drops.splice(drops.indexOf(n),1);say(NAMES[n.t]+' +'+k)}};
+function chop(w){const n=nodes.find(n=>n.t==='tree'&&front(n,2.4));if(!n||n.hp<=0)return;const g=w===1?3:1;inv.wood+=g;n.hp-=w===1?1:.5;snd(400,.15,.4,true);say(n.hp<=0?`Дрова +${g}. Дерево обобрано.`:`Дрова +${g}`)}
+const NAMES={wood:'Дрова',metal:'Металл',cloth:'Тряпки',can:'Тушёнка',bread:'Сухари',dirty:'Грязная вода',clean:'Чистая вода',bandage:'Бинт',a9:'Патроны 9 мм',shot:'Дробь',a545:'Патроны 5,45'};
+function target(){let n=drops.find(d=>Math.hypot(d.x-P.x,d.z-P.z)<2);if(n)return{label:'Подобрать: '+NAMES[n.t],go(){const k=n.t==='a9'?4:n.t==='shot'?2:n.t==='a545'?10:1;inv[n.t]+=k;drops.splice(drops.indexOf(n),1);say(NAMES[n.t]+' +'+k)}};
 n=nodes.find(n=>(n.t==='crate'||n.t==='metal')&&!n.taken&&front(n,2.6));if(n)return{label:n.t==='crate'?'Обыскать ящик':'Разобрать хлам',go(){n.taken=100;const got={};const add=(k,v)=>{inv[k]+=v;got[k]=(got[k]||0)+v};
-if(n.t==='metal'){add('metal',2+(Math.random()*2|0));if(Math.random()<.3)add('a9',3)}else{const pool=['can','bread','dirty','clean','cloth','cloth','wood','metal','a9','shot'];for(let i=0;i<3;i++){const k=pool[Math.random()*pool.length|0];add(k,k==='a9'?4:k==='shot'?2:1)}
+if(n.t==='metal'){add('metal',2+(Math.random()*2|0));if(Math.random()<.3)add('a9',3)}else{const pool=['can','bread','dirty','clean','cloth','cloth','wood','metal','a9','shot','a545'];for(let i=0;i<3;i++){const k=pool[Math.random()*pool.length|0];add(k,k==='a9'?4:k==='shot'?2:k==='a545'?10:1)}
+if(!P.own[4]&&Math.random()<.12){P.own[4]=1;say('Найдено мачете!');slots();return}
+if(!P.own[5]&&day>1&&Math.random()<.07){P.own[5]=1;P.mag[5]=30;say('Найден АК-74!');slots();return}
 if(!P.own[2]&&Math.random()<.14){P.own[2]=1;P.mag[2]=8;say('Найден пистолет Макарова!');slots();return}}
 say(Object.entries(got).map(([k,v])=>NAMES[k]+' +'+v).join(', '));snd(250,.2,.3,true)}};
 return{label:'',go(){inv.dirty++;say('Набрал снега в бутылку: грязная вода +1');cd=.5},snow:1}}
@@ -310,9 +349,11 @@ const REC=[['Костёр','Греет, горит около 2 минут',{woo
 ['Кипячёная вода','Нужен костёр рядом',{dirty:1,wood:1},()=>inv.clean++,nearFire],
 ['Бинт','+35 здоровья',{cloth:2},()=>inv.bandage++],
 ['Топор','Лучше рубит конечности и деревья',{wood:3,metal:3},()=>{P.own[1]=1;P.w=1},()=>!P.own[1]],
+['Мачете','Длинный клинок, хорошо отрубает',{wood:2,metal:4},()=>{P.own[4]=1;P.w=4},()=>!P.own[4]],
+['АК-74','Автоматический огонь, 30 патронов',{metal:14,wood:6,cloth:2},()=>{P.own[5]=1;P.w=5},()=>!P.own[5]],
 ['Самопальный ПМ','8 патронов в магазине',{metal:7,wood:1},()=>{P.own[2]=1;P.w=2},()=>!P.own[2]],
 ['Обрез','Дробь отрывает куски',{metal:6,wood:4,cloth:1},()=>{P.own[3]=1;P.w=3},()=>!P.own[3]],
-['Патроны 9 мм ×5','',{metal:2},()=>inv.a9+=5],['Дробь ×3','',{metal:2,cloth:1},()=>inv.shot+=3]];
+['Патроны 9 мм ×5','',{metal:2},()=>inv.a9+=5],['Патроны 5,45 ×15','',{metal:3},()=>inv.a545+=15],['Дробь ×3','',{metal:2,cloth:1},()=>inv.shot+=3]];
 const EAT={can:['food',40,'Съесть'],bread:['food',18,'Съесть'],clean:['water',38,'Выпить'],dirty:['water',22,'Выпить (−8 здоровья)'],bandage:['hp',35,'Перевязаться']};
 let mode='';
 function open_(m){if(!run&&m!=='gfx')return;stopTouch();mode=m;paused=true;$('panel').hidden=false;if(document.pointerLockElement)document.exitPointerLock();for(const k in keys)keys[k]=0;firing=false;draw_()}
@@ -336,7 +377,8 @@ for(const[n,d,need,make,cond]of REC){const ok=Object.entries(need).every(([k,v])
 else{h('Рюкзак');for(const k in NAMES){const e=EAT[k];row(`${NAMES[k]} × ${inv[k]}`,'',e&&e[2],inv[k]>0,()=>{inv[k]--;P[e[0]]=Math.min(100,P[e[0]]+e[1]);if(k==='dirty')P.hp=Math.max(1,P.hp-8)})}}}
 function resume(){$('panel').hidden=true;paused=!run;mode='';$('close').textContent='Вернуться в игру'}
 $('close').onclick=resume;$('gfxBtn').onclick=()=>{$('close').textContent='Назад в меню';open_('gfx')};
-function slots(){const s=$('slots');s.innerHTML='';WN.forEach((n,i)=>{const b=document.createElement('button');b.textContent=(mob?'':i+1+' ')+n;b.disabled=!P.own[i];if(P.w===i)b.className='on';b.onclick=()=>{P.w=i;cd=.25;slots()};s.append(b)})}
+function slots(){const s=$('slots');s.innerHTML='';ORDER.filter(i=>P.own[i]).forEach((i,k)=>{const b=document.createElement('button');b.textContent=(mob?'':k+1+' ')+WN[i];if(P.w===i)b.className='on';b.onclick=()=>pick(i);s.append(b)})}
+function pick(i){if(P.w===i)return;P.w=i;cd=.3;reloadT=0;rec=0;swing=0;slots()}
 /* ---------- управление ---------- */
 const keys={};let firing=false,drag=null,joy=[0,0];
 function jump(){if(!P.y&&!paused)P.vy=4.6}
@@ -344,7 +386,7 @@ addEventListener('keydown',e=>{if(!run)return;const c=e.code;if(['Space','Tab'].
 if(c==='KeyC'||c==='KeyI'||c==='Tab'){const m=c==='KeyI'?'bag':'craft';mode===m?resume():open_(m);return}
 if(c==='KeyP'||c==='Escape'){paused?resume():open_('pause');return}
 keys[c]=1;if(c==='KeyE')use();if(c==='KeyR'&&!paused)reload();if(c==='Space')jump();if(c==='KeyF')attack();
-const n=+c.replace('Digit','')-1;if(n>=0&&n<4&&P.own[n]){P.w=n;slots()}});
+const n=+c.replace('Digit','')-1,own=ORDER.filter(i=>P.own[i]);if(n>=0&&n<own.length)pick(own[n])});
 addEventListener('keyup',e=>keys[e.code]=0);
 const turn=(x,y,k)=>{k*=G.sens;P.yaw-=x*k;P.pit=Math.max(-1.4,Math.min(1.4,P.pit-y*k))};
 function lock(){try{const r=cv.requestPointerLock&&cv.requestPointerLock();r&&r.catch&&r.catch(()=>{})}catch(e){}}
@@ -378,7 +420,8 @@ $('menu').querySelector('h1').textContent='Ты погиб';$('menu').querySelec
 /* ---------- логика ---------- */
 const night=()=>Math.max(0,Math.min(1,.5+Math.cos(time*6.283)*1.6));
 function update(dt){time+=dt/300;if(time>=1){time-=1;day++;say('Наступил день '+day)}
-cd-=dt;swing=Math.max(0,swing-dt*4);flash-=dt;shake=Math.max(0,shake-dt);
+cd-=dt;swing=Math.max(0,swing-dt*swingRate);rec=Math.max(0,rec-dt*(1.5+rec*7));reloadT=Math.max(0,reloadT-dt);equip=Math.max(0,equip-dt*4);if(P.w!==lastW){lastW=P.w;equip=1;reloadT=0}
+for(const q of shells){q.t-=dt;q.vy-=5*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.a+=dt*14}shells=shells.filter(q=>q.t>0);updateCorpses(dt);flash-=dt;shake=Math.max(0,shake-dt);
 let f=(keys.KeyW?1:0)-(keys.KeyS?1:0)-joy[1],s=(keys.KeyD?1:0)-(keys.KeyA?1:0)+joy[0];const l=Math.hypot(f,s);if(l>1){f/=l;s/=l}
 const sprint=(keys.ShiftLeft||sprintOn)&&l>.1&&P.st>2,v=(sprint?6:3.5)*dt;P.st=Math.max(0,Math.min(100,P.st+(sprint?-18:14)*dt));
 const sn=Math.sin(P.yaw),cs=Math.cos(P.yaw);move(P,(-sn*f+cs*s)*v,(-cs*f-sn*s)*v,.35);P.bob+=l*v*2.2;
@@ -392,9 +435,9 @@ for(const n of nodes){if(n.taken>0)n.taken=Math.max(0,n.taken-dt);if(n.t==='tree
 for(const q of fires)q.t-=dt;fires=fires.filter(q=>q.t>0);
 spawnT-=dt;if(spawnT<=0){spawnT=Math.max(2.5,(night()>.5?5:11)-day*.4);if(en.length<Math.min(18,5+day*2+(night()>.5?4:0)))spawn()}
 for(const e of[...en]){const dx=P.x-e.x,dz=P.z-e.z,d=Math.hypot(dx,dz),n=legs(e);e.ph+=dt*6;e.stun-=dt;e.atk-=dt;
-if(e.bleed>0){const q=wpos(e,e.parts[0]);if(Math.random()<dt*25)bleed(q[0],q[1],q[2],2,1.2);if(Math.random()<dt*3)splat(e.x+R(-.3,.3),e.z+R(-.3,.3),R(.2,.5));e.hp-=e.bleed*dt*.8;if(e.hp<=0){die(e);continue}}
+if(e.bleed>0){const q=wpos(e,e.parts[0]);if(Math.random()<dt*25)bleed(q[0],q[1],q[2],2,1.2);if(Math.random()<dt*3)splat(e.x+R(-.3,.3),e.z+R(-.3,.3),R(.2,.5));e.hp-=e.bleed*dt*.8;if(e.hp<=0){die(e,true);continue}}
 const chase=e.alert||d<(night()>.5?32:20);if(chase)e.yaw=Math.atan2(dx,dz);else if(Math.random()<dt*.4)e.yaw=R(0,6.28);
-if(e.stun<=0&&d>1.15){const sp=e.sp*(n===2?1:n===1?.55:.35)*(chase?1+night()*.3:.3)*dt,bx=e.x,bz=e.z;move(e,Math.sin(e.yaw)*sp,Math.cos(e.yaw)*sp,.3);
+if(e.stun<=0&&d>1.15){const sp=e.sp*(e.limp?.6:1)*(n===2?1:n===1?.55:.35)*(chase?1+night()*.3:.3)*dt,bx=e.x,bz=e.z;move(e,Math.sin(e.yaw)*sp,Math.cos(e.yaw)*sp,.3);
 if(chase&&Math.hypot(e.x-bx,e.z-bz)<sp*.5)move(e,Math.cos(e.yaw)*sp,-Math.sin(e.yaw)*sp,.3)}
 if(d<1.5&&e.atk<=0&&e.stun<=0&&P.y<.7){e.atk=1.3;const arms=e.parts[2].on+e.parts[3].on;P.hp-=(arms?4+arms*3:5)*e.m;shake=.3;$('hurt').style.opacity=.9;snd(110,.35,.3)}
 if(chase&&Math.random()<dt*.12&&d<18)snd(R(60,130),.7,.08)}
@@ -420,9 +463,9 @@ for(const d of drops){const c=C(d.t==='can'?0xb07a3a:d.t==='dirty'?0x6f7d52:0xd8
 for(const f of fires){for(let i=0;i<3;i++)box(f.x,.1,f.z,.17,1,.17,C(0x3a2417),i*1.05,1.5708,0,2,3);for(let i=0;i<8;i++)box(f.x+Math.sin(i*.785)*.6,.08,f.z+Math.cos(i*.785)*.6,.26,.18,.22,C(0x66686a),i,0,0,3,4);
 for(let i=0;i<14;i++){const q=(t*1.5+i/14)%1,s=.27*(1-q);box(f.x+Math.sin(i*7+t*3)*.22*(1-q),.15+q*1.15,f.z+Math.cos(i*5+t*4)*.22*(1-q),s,s*1.9,s,[1,.78-q*.58,.12*(1-q)],i+t*3,0,1,4)}
 for(let i=0;i<6;i++){const q=(t*.9+i/6)%1;box(f.x+Math.sin(i*11+t)*.5*q,.8+q*2.4,f.z+Math.cos(i*13+t)*.5*q,.03,.03,.03,[1,.55,.1],0,0,1)}}
-for(const e of en){if(far(e.x,e.z,Math.min(range,48)))continue;const n=legs(e),m=e.m;for(const q of e.parts){if(!q.on){if(q.n!=='body'){const o={n:q.n,o:[q.o[0]*.8,q.n==='head'?1.54*m:q.n.startsWith('arm')?1.45*m:.76*m,0]},p=wpos(e,o);box(...p,.18*m,.12,.18*m,C(gore?0x8a0709:0x333333),e.yaw,0,0,3,8);if(gore)box(p[0],p[1]+.02,p[2],.06,.16,.06,C(0xd8cfc0),e.yaw,.4,0,2)}continue}
+const drawBody=(e,ck)=>{const n=legs(e),m=e.m;for(const q of e.parts){if(!q.on){if(q.n!=='body'){const o={n:q.n,o:[q.o[0]*.8,q.n==='head'?1.54*m:q.n.startsWith('arm')?1.45*m:.76*m,0]},p=wpos(e,o);box(...p,.18*m,.12,.18*m,C(gore?0x8a0709:0x333333),e.yaw,0,0,3,8);if(gore)box(p[0],p[1]+.02,p[2],.06,.16,.06,C(0xd8cfc0),e.yaw,.4,0,2)}continue}
 let p=wpos(e,q),tl=n?0:1.57;const isArm=q.n.startsWith('arm'),isLeg=q.n.startsWith('leg');
-if(isArm){tl=n?-1.1+Math.sin(e.ph+q.o[0]*5)*.2:-1.4+Math.sin(e.ph+q.o[0]*9)*.5;if(n)p=wpos(e,{n:q.n,o:[q.o[0],q.o[1]+.15*m,.34*m]})}
+if(isArm){tl=n?-1.1+Math.sin(e.ph+q.o[0]*5)*.2:-1.4+Math.sin(e.ph+q.o[0]*9)*.5;if(ck!==undefined)tl=tl*(1-ck)+(q.o[0]>0?-.22:-.08)*ck;if(n)p=wpos(e,{n:q.n,o:[q.o[0],q.o[1]+.15*m,.34*m]})}
 if(isLeg&&n)tl=Math.sin(e.ph+(q.o[0]>0?3.14:0))*.4;
 const cyw=Math.cos(e.yaw),syw=Math.sin(e.yaw),along=(k,fw=0)=>{const ly=k*Math.cos(tl),lz=k*Math.sin(tl)+fw;return[p[0]+lz*syw,p[1]+ly,p[2]+lz*cyw]};
 if(q.n==='head'){box(...p,q.s[0],q.s[1]*1.08,q.s[2]*1.05,q.c,e.yaw,tl,0,3,7);
@@ -434,7 +477,15 @@ for(const s of[-.24,.24]){const a=along(.24*m);box(a[0]+cyw*s*m,a[1],a[2]-syw*s*
 if(gore&&e.hp<75*m*m){const a=wpos(e,{n:'body',o:[.08*m,1.2*m,.18*m]});box(...a,.26,.3,.04,C(0x77080a),e.yaw,tl,0,3,8);for(let i=0;i<3;i++){const b=wpos(e,{n:'body',o:[.08*m,(1.17+i*.06)*m,.2*m]});box(...b,.17,.022,.02,C(0xcfc4ae),e.yaw,tl,0,2)}}}
 else{box(...along(q.s[1]*.2),q.s[0]*1.12,q.s[1]*.6,q.s[2]*1.12,q.c,e.yaw,tl,0,1,7);box(...along(-q.s[1]*.2),q.s[0]*.86,q.s[1]*.56,q.s[2]*.86,q.c,e.yaw,tl,0,1,7);
 if(isArm){const sk=e.parts[1].c;box(...along(-q.s[1]*.52),.13*m,.17*m,.1*m,sk,e.yaw,tl,0,1,7);for(let i=-1;i<=1;i++){const a=along(-q.s[1]*.66);box(a[0]+cyw*i*.038*m,a[1],a[2]-syw*i*.038*m,.025*m,.13*m,.025*m,sk,e.yaw,tl-.25,0,2,7)}}
-else box(...along(-q.s[1]*.47,.06*m),.22*m,.14*m,.34*m,C(0x17130f),e.yaw,tl,0,1,7)}}}
+else box(...along(-q.s[1]*.47,.06*m),.22*m,.14*m,.34*m,C(0x17130f),e.yaw,tl,0,1,7)}}
+if(e.holes)for(const o of e.holes){const q=e.parts.find(q=>q.n===o.n);if(!q||!q.on)continue;const isArm=q.n.startsWith('arm');if(isArm)continue;
+const p=wpos(e,{n:q.n,o:[q.o[0]+o.x*q.s[0]*.8/m,q.o[1]+o.y*q.s[1]*.8,q.o[2]+q.s[2]*.54]});if(!n&&q.n!=='head')continue;box(...p,.07,.07,.025,C(0x4c0305),e.yaw,0,0,3,8);box(p[0]+Math.sin(e.yaw)*.012,p[1],p[2]+Math.cos(e.yaw)*.012,.028,.028,.012,[.03,0,0],e.yaw,0,0,3)}};
+for(const e of en)if(!far(e.x,e.z,Math.min(range,48)))drawBody(e);
+for(const c of corpses){const e=c.e;if(far(e.x,e.z,Math.min(range,48)))continue;const th=legs(e)?c.dir*1.52*c.k:0,a=Math.cos(e.yaw),b=Math.sin(e.yaw),ct=Math.cos(th),st_=Math.sin(th);
+/* поворот вокруг ступней: Ry(yaw)*Rx(th)*Ry(-yaw) */
+const A=[a,0,-b,b*st_,ct,a*st_,b*ct,-st_,a*ct],B=[a,0,b,0,1,0,-b,0,a],T_=[0,0,0,0,0,0,0,0,0];for(let i=0;i<3;i++)for(let j=0;j<3;j++)T_[i*3+j]=A[j]*B[i*3]+A[3+j]*B[i*3+1]+A[6+j]*B[i*3+2];
+const sink=c.t<4?(4-c.t)*.12:0;TF={m:T_,px:e.x,py:0,pz:e.z,ox:e.x,oy:Math.abs(st_)*.19*e.m-sink,oz:e.z};drawBody(e,c.k);TF=null}
+if(!depthPass)for(const c of corpses)if(c.pool){const d=c.pool;box(d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],0,0,2,8)}
 for(const g of gibs){const big=g.s[1]>.3;box(g.x,g.y,g.z,...g.s,g.c,g.a,g.b,0,big?1:g.s[0]>.3?3:1,big||g.s[0]>.3?7:8)}
 }
 function render(t){const dpr=Math.min(devicePixelRatio||1,2)*G.res,w=Math.max(1,cv.clientWidth*dpr|0),h=Math.max(1,cv.clientHeight*dpr|0);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
@@ -475,21 +526,106 @@ for(let i=0;i<G.snow;i++){const q=flakes[i];if(!paused){q[1]-=.011+(i%5)*.002;q[
 gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(U.VP,false,new Float32Array(pm));gl.uniform3f(U.eye,0,0,0);gl.uniform4f(U.fire,0,99,0,0);gl.uniform1f(U.shOn,0);gl.uniform3f(U.sun,.45,.75,.48);
 {const near_=nf&&nd<5?.7:0;gl.uniform3f(U.sunCol,sunCol[0]*.8+near_,sunCol[1]*.8+near_*.4,sunCol[2]*.8)}
 gl.uniform3fv(U.lamp,flash>0?[5,3,1]:[.12,.1,.08]);localTex=1;
-const asp=w/h,ox=Math.min(.34,asp*.28),bx=ox+Math.sin(P.bob*.5)*.015,by=-.3+Math.abs(Math.cos(P.bob*.5))*.015,sw=Math.sin(swing*3.14),skin=C(0xb98d72),sl=C(0x3d4430),st=C(0x34383b),wd=C(0x6a4428),W=P.w;
-const X=bx-sw*.25,Y=by,Z=-.62-sw*.15;
-box(X+.05,Y-.12,Z+.23,.14,.48,.14,sl,.15,1.57+.3,0,2,7);box(X+.01,Y-.065,Z+.07,.118,.1,.118,C(0x23261b),.15,1.87,0,2,7);box(X,Y-.04,Z,.095,.1,.12,skin,0,0,0,1,7);
-for(let i=0;i<4;i++)box(X-.045,Y-.005-i*.026,Z-.03,.045,.023,.06,skin,0,0,0,1,7);box(X+.02,Y+.015,Z-.05,.035,.032,.075,skin,-.3,.2,0,1,7);
-if(W===0){box(X,Y+.01,Z-.02,.04,.15,.048,wd,0,1.57-sw,0,2,3);box(X,Y+.012,Z-.095,.03,.1,.02,C(0x6b6f72),0,-sw,0,0,5);box(X,Y+.04-sw*.03,Z-.22,.012,.055,.24,C(0xaeb4b8),.05,-sw*1.2,0,0,10);box(X,Y+.04-sw*.03,Z-.35,.012,.055,.075,C(0xaeb4b8),1.5708+.05,0,0,5,10);if(kills&&gore)box(X,Y+.035-sw*.03,Z-.28,.015,.04,.12,C(0x6a0507),.05,-sw*1.2,0,1,8)}
-if(W===1){const a=-.35-sw*1.2,py=y=>Y+y*Math.cos(a),pz=y=>Z+y*Math.sin(a);box(X,py(.16),pz(.16),.042,.48,.05,wd,0,a,0,2,3);box(X,py(.36),pz(.36)-.05,.045,.12,.14,C(0x5c6266),0,a,0,0,5);box(X,py(.36),pz(.36)-.135,.02,.17,.05,C(0xc0c5c8),0,a,0,1,10);if(kills&&gore)box(X,py(.34),pz(.34)-.15,.024,.12,.035,C(0x6a0507),0,a,0,1,8)}
-if(W===2){const rc=cd>.15?.05:0;box(X,Y+.045,Z-.1+rc,.06,.065,.28,st,0,rc*3,0,1,5);box(X,Y+.048,Z-.25+rc,.032,.05,.032,C(0x15171a),0,1.5708,0,2,5);box(X,Y+.085,Z-.22+rc,.012,.018,.018,st);box(X,Y+.085,Z+.02+rc,.03,.016,.018,st);box(X,Y-.02,Z+rc,.05,.14,.072,C(0x4a2c1e),0,-.2,0,1,3);box(X,Y-.01,Z-.07+rc,.012,.05,.07,st)}
-if(W===3){const rc=cd>.6?.1:0;for(const s of[-.03,.03]){box(X+s,Y+.055,Z-.2+rc,.056,.48,.056,st,0,1.5708+rc*2,0,2,5);box(X+s,Y+.055+rc*.4,Z-.442+rc,.036,.008,.036,[.02,.02,.02],0,1.5708,0,2)}box(X,Y+.005,Z-.14+rc,.12,.05,.2,wd,0,rc*2,0,1,3);box(X,Y-.01,Z+.07+rc,.085,.09,.2,wd,0,-.25,0,1,3)}
-if(flash>0&&W>1)for(let i=0;i<5;i++)box(X+R(-.02,.02),Y+.06,Z-(W===2?.31:.52),.04,R(.12,.2),.04,[1,.75,.25],i*1.25,R(-3,3),1,4);
-$('film').style.opacity=G.film?1:0}
+drawViewmodel(t,w/h);$('film').style.opacity=G.film?1:0}
+function rot(yaw,pit,roll){const a=Math.cos(yaw),b=Math.sin(yaw),e=Math.cos(pit),f=Math.sin(pit),c=Math.cos(roll),d=Math.sin(roll),A=[a,0,-b,b*f,e,a*f,b*e,-f,a*e];
+return[A[0]*c+A[3]*d,A[1]*c+A[4]*d,A[2]*c+A[5]*d,-A[0]*d+A[3]*c,-A[1]*d+A[4]*c,-A[2]*d+A[5]*c,A[6],A[7],A[8]]}
+const COL={steel:C(0x34373b),dark:C(0x1c1e21),black:C(0x0b0c0d),blade:C(0xaab0b6),edge:C(0xe2e6ea),wood:C(0x7a4220),wood2:C(0x59301a),bake:C(0x4a2014),skin:C(0xb58a70),glove:C(0x24251f),sleeve:C(0x424a32),cuff:C(0x2b3022),tape:C(0x26231e),brass:C(0xc59a3c),red:C(0x6a0507)};
+/* кусок оружия: позиция, размер, цвет, материал, форма, наклон, поворот */
+const wb=(x,y,z,sx,sy,sz,c,mt=12,me=0,pit=0,yaw=0)=>box(x,y,z,sx,sy,sz,c,yaw,pit,0,me,mt);
+const rod=(x,y,z,d,len,c,mt=12,pit=0)=>wb(x,y,z,d,len,d,c,mt,2,1.5708+pit);   /* стержень вдоль ствола */
+const sm=(x,y,z,id,c,mt,pit=0)=>wb(x,y,z,1,1,1,c,mt,id,pit);
+function limb(a,b,r1,c,mt){const dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],l=Math.hypot(dx,dy,dz);wb((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2,r1,l*1.08,r1,c,mt,2,Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz))}
+/* кисть, обхватывающая рукоять в точке (x,y,z); side: 1 правая, -1 левая */
+function hand(x,y,z,side,elbow,under){const g=COL.glove,sk=COL.skin;
+if(under){wb(x,y-.032,z,.078,.034,.09,g,7,1);for(let i=0;i<4;i++){const fz=z-.032+i*.022;limb([x-.02*side,y-.036,fz],[x-.045*side,y-.002,fz],.022,g,7);limb([x-.045*side,y-.002,fz],[x-.032*side,y+.024,fz],.019,sk,7)}limb([x+.025*side,y-.03,z+.02],[x+.042*side,y+.018,z-.025],.024,sk,7)}
+else{wb(x+.028*side,y,z+.006,.04,.094,.07,g,7,1);for(let i=0;i<4;i++){const fy=y+.03-i*.022;limb([x+.03*side,fy,z-.025],[x-.004*side,fy-.004,z-.045],.023,g,7);limb([x-.004*side,fy-.004,z-.045],[x-.033*side,fy-.006,z-.018],.019,sk,7);wb(x+.047*side,fy+.002,z-.014,.013,.016,.018,g,7,3)}
+limb([x+.022*side,y+.036,z+.03],[x-.022*side,y+.052,z-.012],.026,sk,7)}
+const w0=under?[x+.012*side,y-.045,z+.035]:[x+.03*side,y-.025,z+.04],mid=[w0[0]+(elbow[0]-w0[0])*.28,w0[1]+(elbow[1]-w0[1])*.28,w0[2]+(elbow[2]-w0[2])*.28];
+limb(w0,mid,.066,sk,7);limb([w0[0],w0[1],w0[2]],[w0[0]+(mid[0]-w0[0])*.4,w0[1]+(mid[1]-w0[1])*.4,w0[2]+(mid[2]-w0[2])*.4],.078,g,7);limb(mid,elbow,.11,COL.sleeve,7);limb(mid,[mid[0]+(elbow[0]-mid[0])*.12,mid[1]+(elbow[1]-mid[1])*.12,mid[2]+(elbow[2]-mid[2])*.12],.122,COL.cuff,7)}
+const bloody=()=>kills&&gore;
+const MODELS={
+0(){ /* армейский нож */
+hand(0,0,0,1,[.17,-.2,.34]);rod(0,0,0,.034,.13,COL.dark,13);for(let i=0;i<5;i++)rod(0,0,-.045+i*.022,.039,.006,COL.black,7);rod(0,0,.072,.044,.022,COL.steel);
+wb(0,0,-.072,.022,.074,.014,COL.steel,12,1);sm(0,0,-.076,SH.knife,COL.blade,14);sm(0,-.001,-.076,SH.knifeEdge,COL.edge,14);wb(0,.006,-.16,.0095,.006,.13,COL.dark);for(let i=0;i<6;i++)wb(0,.027,-.1-i*.012,.008,.007,.006,COL.dark);
+if(bloody()){wb(0,-.006,-.255,.0105,.018,.08,COL.red,8,1);wb(0,-.015,-.16,.0102,.007,.05,COL.red,8,1)}},
+4(){ /* мачете */
+hand(0,0,0,1,[.17,-.2,.34]);rod(0,0,.006,.036,.15,COL.wood2,13);for(let i=0;i<7;i++)rod(0,0,-.052+i*.02,.04,.01,COL.tape,7);wb(0,-.01,.088,.026,.05,.026,COL.wood2,13,1);
+wb(0,0,-.078,.018,.056,.012,COL.dark);sm(0,0,-.082,SH.mach,C(0x676d72),14);sm(0,-.001,-.082,SH.machEdge,COL.edge,14);for(const z of[-.012,.036])rod(.019,0,z,.012,.004,COL.brass,10);wb(0,.008,-.27,.0095,.007,.29,COL.dark);
+if(bloody()){wb(0,-.022,-.42,.011,.032,.13,COL.red,8,1);wb(0,-.034,-.29,.0105,.012,.09,COL.red,8,1)}},
+1(){ /* топор: рукоять вдоль оси y */
+hand(0,-.02,0,1,[.2,-.22,.32]);hand(0,.15,0,-1,[-.3,-.16,.3]);
+wb(0,-.085,.004,.044,.09,.05,COL.wood,13,2,.05);wb(0,.07,0,.033,.25,.043,COL.wood,13,2);wb(0,.27,-.002,.034,.18,.046,COL.wood,13,2,-.03);wb(0,-.135,.007,.052,.022,.058,COL.wood2,13,3);
+for(let i=0;i<6;i++)wb(0,-.062+i*.017,0,.046,.011,.054,COL.tape,7,2);for(let i=0;i<3;i++)wb(0,.272+i*.014,-.004,.043,.008,.055,COL.tape,7,2);
+sm(0,.345,0,SH.axe,C(0x4c5156),12);sm(0,.345,0,SH.axeEdge,COL.edge,14);wb(0,.346,.005,.04,.07,.07,COL.dark,12,1);wb(0,.346,.052,.036,.052,.035,C(0x5e6368),12);wb(0,.386,.004,.012,.012,.03,COL.brass,10);
+if(bloody()){wb(0,.33,-.143,.0115,.11,.02,COL.red,8,1);wb(.0136,.325,-.1,.002,.06,.05,COL.red,8,3)}},
+2(k){ /* пистолет Макарова; k.rec двигает затвор */
+const back=Math.min(1,k.rec)*.045;
+hand(0,-.062,.035,1,[.16,-.2,.36]);if(k.two)hand(-.012,-.082,.022,-1,[-.28,-.24,.28]);
+wb(0,.005,-.03,.036,.036,.19,COL.dark,12,1);                      /* рамка */
+wb(0,.04,-.04+back,.038,.042,.215,COL.steel,12,1);                  /* затвор */
+wb(0,.052,-.04+back,.03,.022,.212,COL.steel,12,0);for(let i=0;i<7;i++)for(const s_ of[-.0196,.0196])wb(s_,.042,.032+i*.008+back,.002,.03,.0035,COL.black);
+wb(.0195,.046,-.035+back,.003,.016,.05,COL.black);rod(0,.038,-.152,.019,.026,COL.dark);rod(0,.038,-.167,.011,.004,COL.black);
+wb(0,.067,-.135+back,.007,.011,.014,COL.black);for(const s_ of[-.009,.009])wb(s_,.067,.055+back,.007,.012,.012,COL.black);
+wb(0,.032,.083+back*.3,.011,.024,.016,COL.dark,12,1,-.5);
+wb(0,-.052,.04,.033,.125,.058,COL.dark,12,1,-.24);for(const s_ of[-.018,.018]){wb(s_,-.054,.04,.006,.098,.046,COL.bake,13,1,-.24);rod(s_*1.2,-.05,.04,.01,.002,COL.black,12)}
+wb(0,-.116+(k.mag||0),.056,.036,.014,.064,COL.black,12,1,-.24);if(k.mag)wb(0,-.095+k.mag,.05,.024,.07,.042,COL.steel,12,0,-.24);
+wb(0,-.043,-.052,.008,.006,.058,COL.dark);wb(0,-.028,-.083,.008,.034,.006,COL.dark,12,0,.25);wb(0,-.019,-.04,.007,.034,.009,COL.black,12,1,.35);
+for(const z of[-.08,.01])wb(.019,.006,z,.004,.008,.008,COL.black,12,3)},
+3(k){ /* обрез двустволки; k.open переламывает стволы */
+const o=-(k.open||0)*.55,py=z=>.025+Math.sin(o)*(-z-.07),pz=z=>-.07+Math.cos(o)*(z+.07);
+hand(0,-.07,.13,1,[.17,-.2,.42]);hand(0,py(-.22)-.02,pz(-.22),-1,[-.3,-.2,.24],true);
+for(const x of[-.022,.022]){rod(x,py(-.27),pz(-.27),.043,.39,COL.steel,12,o);rod(x,py(-.462),pz(-.462),.047,.016,C(0x6a6e72),12,o);rod(x,py(-.472),pz(-.472),.029,.004,COL.black,0,o);if(k.open>.5)rod(x,py(-.07),pz(-.07),.031,.02,COL.brass,10,o)}
+wb(0,py(-.27)+.023,pz(-.27),.014,.007,.38,COL.dark,12,0,o);wb(0,py(-.45)+.032,pz(-.45),.008,.008,.008,COL.brass,10,3,o);
+wb(0,py(-.215)-.032,pz(-.215),.082,.045,.19,COL.wood,13,1,o);for(let i=0;i<4;i++)wb(0,py(-.17-i*.028)-.034,pz(-.17-i*.028),.084,.037,.005,COL.wood2,13,1,o);
+wb(0,.012,-.015,.09,.062,.13,C(0x62676b),12,1);for(const x of[-.046,.046]){wb(x,.012,-.005,.004,.04,.085,C(0x787d80),14,1);for(const z of[-.035,.02])rod(x*1.04,.012,z,.011,.003,COL.black)}
+for(const x of[-.025,.025]){wb(x,.054,.045,.012,.04,.016,COL.dark,12,1,.55);wb(x,.072,.058,.012,.012,.024,COL.dark,12,1)}
+wb(0,.047,-.005,.014,.007,.07,COL.dark,12,1,0,.12);
+wb(0,-.052,.015,.012,.006,.09,COL.dark);wb(0,-.034,-.029,.012,.038,.006,COL.dark,12,0,.25);for(const z of[.0,.027])wb(0,-.032,z,.006,.032,.008,COL.black,12,1,.35);
+sm(0,-.004,.045,SH.obStock,COL.wood,13);for(let i=0;i<5;i++)wb(0,-.055-i*.011,.13+i*.007,.043,.0035,.047,COL.wood2,13,1,-.6)},
+5(k){ /* АК-74 */
+const bolt=Math.min(1,k.rec)*.05;
+hand(0,-.085,.09,1,[.17,-.22,.4]);hand(0,-.012,-.22,-1,[-.3,-.22,.18],true);
+wb(0,0,.01,.056,.062,.28,COL.steel,12);wb(0,.036,.02,.05,.044,.25,COL.dark,12,1);for(let i=0;i<5;i++)wb(0,.05,.05+i*.018,.046,.014,.006,COL.steel,12,1);
+wb(.029,.015,-.02,.004,.026,.1,COL.black);wb(.04,.022,-.035+bolt,.03,.012,.016,COL.steel,14,1);wb(.0295,-.008,.065,.004,.008,.15,C(0x55595d),12,0,-.07);
+for(const z of[-.08,.03,.11])rod(.03,-.018,z,.009,.003,C(0x72767a),14);
+wb(0,-.004,-.215,.062,.05,.165,COL.wood,13,1);wb(0,.043,-.205,.045,.036,.14,COL.wood,13,1);for(let i=0;i<4;i++)for(const x of[-.0235,.0235])wb(x,.048,-.255+i*.034,.002,.01,.018,COL.black,0);
+for(const z of[-.135,-.295])wb(0,.012,z,.062,.078,.014,COL.dark,12,1);
+rod(0,.047,-.32,.026,.06,COL.steel);wb(0,.03,-.348,.03,.058,.024,COL.dark,12,1);rod(0,.012,-.39,.021,.2,COL.steel);rod(0,-.014,-.38,.007,.17,COL.dark);
+wb(0,.04,-.442,.018,.05,.022,COL.dark,12,1);wb(0,.078,-.442,.005,.032,.006,COL.black);for(const x of[-.012,.012])wb(x,.074,-.442,.004,.03,.012,COL.dark);
+rod(0,.012,-.512,.034,.065,COL.dark);for(let i=0;i<3;i++)rod(0,.012,-.49-i*.017,.037,.005,COL.black);rod(0,.012,-.547,.016,.006,COL.black,0);
+wb(0,.055,-.092,.028,.024,.07,COL.dark,12,1);wb(0,.072,-.078,.02,.012,.012,COL.black);
+const my=k.mag||0;[[ -.056,-.058,.1],[-.103,-.075,.28],[-.146,-.101,.47],[-.183,-.136,.66]].forEach(([y,z,a],i)=>{wb(0,y+my,z,.034,.06,.064,COL.bake,13,1,a);for(const x of[-.0175,.0175])wb(x,y+my,z,.003,.052,.014,COL.black,0,0,a)});
+wb(0,-.086,.09,.034,.108,.05,COL.bake,13,1,-.38);wb(0,-.068,.025,.01,.006,.085,COL.dark);wb(0,-.05,-.017,.01,.04,.006,COL.dark,12,0,.2);wb(0,-.047,.032,.007,.032,.009,COL.black,12,1,.35);
+sm(0,-.002,.148,SH.stock,COL.wood,13);wb(0,-.05,.45,.042,.12,.016,COL.dark,12,1,.1)}};
+/* положение каждого оружия на экране: [x,y,z, поворот, наклон, крен] */
+const POSE={0:[.17,-.17,-.43,.3,.12,.12],4:[.2,-.2,-.46,.24,.42,.2],1:[.24,-.28,-.5,.22,-.42,.2],2:[.13,-.15,-.45,.1,.03,0],3:[.16,-.18,-.5,.12,.03,-.06],5:[.15,-.17,-.43,.1,.02,-.05]};
+const ease=x=>x*x*(3-2*x),lerp=(a,b,k)=>a+(b-a)*k;
+function drawViewmodel(t,asp){const W=P.w;let[x,y,z,yaw,pit,roll]=POSE[W];
+x*=Math.max(.5,Math.min(1.25,asp*.72));if(asp<1){z-=.06;y-=.01}
+const moving=Math.min(1,Math.abs(joy[0])+Math.abs(joy[1])+(keys.KeyW||keys.KeyA||keys.KeyS||keys.KeyD?1:0));
+x+=Math.sin(P.bob*.5)*.014*moving;y+=Math.abs(Math.cos(P.bob*.5))*.016*moving+Math.sin(t*1.7)*.0035;roll+=Math.sin(P.bob*.5)*.02*moving;
+if(swing>0&&melee(W)){const s_=1-swing,up=ease(Math.min(1,s_/.24)),hit=ease(Math.max(0,Math.min(1,(s_-.24)/.3))),ret=ease(Math.max(0,(s_-.6)/.4));
+const key=(base,a,b)=>lerp(lerp(lerp(base,a,up),b,hit),base,ret);
+if(W===1){y=key(y,y+.17,y-.1);x=key(x,x+.04,x*.25);z=key(z,z+.05,z-.12);pit=key(pit,.35,-1.45);roll=key(roll,-.15,.45)}
+else{const d=swingSide;x=key(x,d>0?x+.1:x*.1,d>0?-x*.5:x+.12);y=key(y,y+.11,y-.07);z=key(z,z,z-.1);yaw=key(yaw,d>0?-.35:.85,d>0?1.15:-.45);roll=key(roll,d>0?-.9:1.1,d>0?1.25:-1);pit=key(pit,.5,-.15)}}
+let mag=0,open=0;
+if(reloadT>0&&AMMO[W]){const p_=1-reloadT/reloadDur,inOut=ease(Math.min(1,Math.min(p_,1-p_)/.22));y-=.045*inOut;roll+=(W===3?.25:.65)*inOut;pit+=(W===3?-.05:.28)*inOut;yaw+=.15*inOut;
+if(W===3)open=inOut;else mag=-.24*ease(Math.max(0,Math.min(1,p_<.5?(p_-.18)/.2:(.72-p_)/.2)))}
+const kick=rec*(W===3?1:W===5?.45:.7);z+=kick*(W===3?.1:.05);y+=kick*.012;pit+=kick*(W===3?.28:W===2?.22:.07);
+y-=ease(equip)*.3;pit-=ease(equip)*.6;
+localTex=4;TF={m:rot(yaw,pit,roll),px:0,py:0,pz:0,ox:x,oy:y,oz:z};
+MODELS[W]({rec,mag,open,two:asp>1.2});
+if(flash>0&&AMMO[W]){const f=W===2?[.04,-.19,1]:W===3?[.025,-.5,1.7]:[.012,-.575,1.25];const a=R(0,3);
+box(0,f[0],f[1]-.02,.05*f[2],.05*f[2],.05*f[2],[1,.95,.7],0,0,1,3);for(let i=0;i<7;i++){const q=a+i*.9,len=R(.05,.11)*f[2];box(Math.cos(q)*len*.35,f[0]+Math.sin(q)*len*.35,f[1]-.02,.022*f[2],len,.022*f[2],[1,R(.55,.8),.15],0,0,1,4)}
+box(0,f[0],f[1]-.07*f[2],.045*f[2],.15*f[2],.045*f[2],[1,.7,.2],0,-1.5708,1,4)}
+for(const q of shells)wb(.03+q.x*.5,.04+q.y*.5,.02+q.z*.5,.012,.032,.012,COL.brass,10,2,q.a,q.a*.7);
+TF=null;localTex=1}
+
 /* ---------- HUD ---------- */
 let hudT=0;function hud(){const bar=(n,v,c)=>`${n} ${Math.ceil(Math.max(0,v))}<div class="bar"><i style="width:${Math.max(0,v)}%;background:${c}"></i></div>`;
 $('stats').innerHTML=bar('Здоровье',P.hp,'#c0262b')+bar('Сытость',P.food,'#c98a2e')+bar('Вода',P.water,'#3f8fc4')+bar('Тепло',P.warm,'#d9622b')+bar('Силы',P.st,'#8fa35a');
 const hr=((time*24+0)|0),W=P.w;
-$('info').innerHTML=`День ${day} · ${String(hr).padStart(2,'0')}:00${night()>.5?' · НОЧЬ':''}<br>Убито: ${kills}<br>${W>1?`<b>${P.mag[W]} / ${inv[W===2?'a9':'shot']}</b><br>`:''}Дрова ${inv.wood} · Металл ${inv.metal}`;
+$('info').innerHTML=`День ${day} · ${String(hr).padStart(2,'0')}:00${night()>.5?' · НОЧЬ':''}<br>Убито: ${kills}<br>${AMMO[W]?`<b>${P.mag[W]} / ${inv[AMMO[W]]}</b><br>`:''}Дрова ${inv.wood} · Металл ${inv.metal}`;
 const t=target();let s=t.snow?'':(mob?'':'[E] ')+t.label;
 const ub=document.querySelector('[data-a=use]');ub.textContent=t.snow?'Снег':'Взять';ub.classList.toggle('ready',!t.snow);if(t.snow&&nodes.some(n=>n.t==='tree'&&n.hp>0&&front(n,2.4)))s='Ударь дерево, чтобы добыть дрова';$('hint').textContent=s}
 reset();let last=0,frames=0,fpsT=0;
