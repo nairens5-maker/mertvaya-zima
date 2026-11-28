@@ -171,7 +171,9 @@ surf(12,1,(u,v)=>{const a=u*6.2832,r=(1-v)*.5;return[Math.cos(a)*r,v-.5,Math.sin
 {const V=[],A=[-.5,-.5],B=[.5,-.5],T=[0,.5];const q=(p,z,n)=>V.push(p[0],p[1],z,...n);
 for(const[a,b,n]of[[A,T,[-.894,.447,0]],[T,B,[.894,.447,0]],[B,A,[0,-1,0]]]){q(a,-.5,n);q(b,-.5,n);q(b,.5,n);q(a,-.5,n);q(b,.5,n);q(a,.5,n)}
 for(const z of[-.5,.5])for(const p of[A,B,T])q(p,z,[0,0,z*2]);mesh(V)}  /* 5 крыша */
-mesh([-1,-1,0,0,0,1, 3,-1,0,0,0,1, -1,3,0,0,0,1]);const SKYM=6;
+mesh([-1,-1,0,0,0,1, 3,-1,0,0,0,1, -1,3,0,0,0,1]);const SKYM=6;sp_(1,1,7,4);const DRIFT=MESH.length-1;sp_(.45,.55,8,5);const LOWBOX=MESH.length-1;
+{const V=[];for(let i=0;i<7;i++){const a=i/7*6.2832,b=(i+1)/7*6.2832,P_=(t,y)=>[Math.cos(t)*.5,y,Math.sin(t)*.5],N_=t=>[Math.cos(t),0,Math.sin(t)];for(const[t,y]of[[a,-.5],[b,-.5],[b,.5],[a,-.5],[b,.5],[a,.5]])V.push(...P_(t,y),...N_(t));V.push(0,.5,0,0,1,0,...P_(a,.5),0,1,0,...P_(b,.5),0,1,0)}mesh(V)}const LOWCYL=MESH.length-1;
+const LOW={1:LOWBOX,2:LOWCYL,3:DRIFT};
 /* контур [z,y] в метрах, вытянутый по x на толщину th */
 function shape(P2,th){const V=[],area=P2.reduce((s,p,i)=>{const q=P2[(i+1)%P2.length];return s+p[0]*q[1]-q[0]*p[1]},0),pts=area<0?[...P2].reverse():P2,idx=pts.map((_,i)=>i);
 const cr=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);let guard=200;
@@ -204,7 +206,7 @@ if(!depthPass){gl.uniform3fv(U.col,c);gl.uniform1f(U.glow,Math.max(glow,HL));gl.
 let chunks=[];
 function bake(){for(const c of chunks)gl.deleteBuffer(c.b);chunks=[];const groups={};
 for(const q of statics){const[x,y,z,sx,sy,sz,c,yaw,pit,glow,me,mt]=q,big=Math.max(sx,sz)>20,key=big?'big':Math.floor(x/18)+':'+Math.floor(z/18);const g=groups[key]||(groups[key]={v:[],x0:1e9,x1:-1e9,z0:1e9,z1:-1e9,big});
-const a=Math.cos(yaw),b=Math.sin(yaw),e=Math.cos(pit),f=Math.sin(pit),m=[a,0,-b,b*f,e,a*f,b*e,-f,a*e],v=MESH[me].v,rad=Math.max(sx,sz)/2;
+const a=Math.cos(yaw),b=Math.sin(yaw),e=Math.cos(pit),f=Math.sin(pit),m=[a,0,-b,b*f,e,a*f,b*e,-f,a*e],v=MESH[LOW[me]||me].v,rad=Math.max(sx,sz)/2;
 g.x0=Math.min(g.x0,x-rad);g.x1=Math.max(g.x1,x+rad);g.z0=Math.min(g.z0,z-rad);g.z1=Math.max(g.z1,z+rad);
 for(let i=0;i<v.length;i+=6){const px=v[i]*sx,py=v[i+1]*sy,pz=v[i+2]*sz;let nx=v[i+3]/sx,ny=v[i+4]/sy,nz=v[i+5]/sz;const l=Math.hypot(nx,ny,nz)||1;nx/=l;ny/=l;nz/=l;
 g.v.push(x+m[0]*px+m[3]*py+m[6]*pz,y+m[1]*px+m[4]*py+m[7]*pz,z+m[2]*px+m[5]*py+m[8]*pz,m[0]*nx+m[3]*ny+m[6]*nz,m[1]*nx+m[4]*ny+m[7]*nz,m[2]*nx+m[5]*ny+m[8]*nz,c[0],c[1],c[2],mt,glow)}}
@@ -287,7 +289,7 @@ zombie(kind,s,mode){const T={runner:[150,900,1500,38],fat:[62,380,820,19],brute:
 const att=mode==='attack',die_=mode==='die';voice({v:(att?.34:die_?.3:.2)*s.vol,t:att?.45:die_?1.1:rr(.7,1.5),f:T[0]*rr(.9,1.12)*(att?1.35:1),bend:die_?.45:att?1.2:rr(.7,1.15),f1:T[1],f2:T[2],rough:T[3]*(att?1.5:1),mouth:att?1.25:rr(.6,1.2),pan:s.pan,rev:.35})}};
 function spatial(x,z,range=32){const dx=x-P.x,dz=z-P.z,d=Math.hypot(dx,dz)||1;return{vol:Math.pow(Math.max(0,1-d/range),1.6),pan:(Math.cos(P.yaw)*dx-Math.sin(P.yaw)*dz)/d*.85}}
 /* ---------- мир ---------- */
-const R=(a,b)=>a+Math.random()*(b-a),SIZE=70;
+const R=(a,b)=>a+Math.random()*(b-a),SIZE=140;
 let statics=[],solids=[],nodes=[],houses=[];
 const MATS={};
 for(const[m,l]of[[1,[0xc3ccd1,0xcfd6da,0xd5dce0,0xdfe5e8]],[2,[0x45494c,0x4b4e50]],[3,[0x5b3f2a,0x33231a,0x3c2b1e,0x4a3328,0x4a2c1e,0x4a2f25,0x4a3b30,0x2b1d14,0x3f7391,0x5a4a40]],[4,[0x8b8d88,0x5d605c,0x666a66,0xb9b2a3,0xa9a294,0x55504a,0x6e3b2c]],[5,[0x7b2f25,0x486050,0x9a8f6a,0x3d5570,0x777777,0xe8e8e0]],[6,[0xd9d8d0]],[9,[0x9fc3d6,0x1a2025,0x35444e,0x1d262b]],[10,[0x8a6a24,0xc9a238]]])for(const h of l)MATS[h]=m;
@@ -295,46 +297,205 @@ function S(x,y,z,sx,sy,sz,c,yaw=0,glow=0,me=0,mt){statics.push([x,y,z,sx,sy,sz,C
 /* цилиндр, повёрнутый набок (колесо, труба) */
 function S2(x,y,z,sx,sy,sz,c,yaw,pit,mt=0){statics.push([x,y,z,sx,sy,sz,C(c),yaw,pit,0,2,mt])}
 function solid(x,z,w,d){solids.push([x-w/2,z-d/2,x+w/2,z+d/2])}
-function izba(x,z){const wood=0x5b3f2a,w=6,d=5;
-const wall=(a,b,sx,sz)=>{S(a,1.4,b,sx,2.8,sz,wood);solid(a,b,sx,sz);for(let h=.4;h<2.8;h+=.55)S(a,h,b,sx+.06,.07,sz+.06,0x33231a)};
-wall(x,z-d/2,w,.3);wall(x-w/2,z,.3,d);wall(x+w/2,z,.3,d);wall(x-2,z+d/2,2,.3);wall(x+2,z+d/2,2,.3);
-S(x,2.6,z+d/2,2,.4,.3,wood);S(x,.03,z,w,.06,d,0x3c2b1e);
-S(x,3.5,z,d+1,1.5,w+.7,0x4a3328,1.5708,0,5);S(x,3.66,z,d+1.04,1.4,w+.9,0xcfd6da,1.5708,0,5);S(x,3.35,z,d-.1,1.1,w+.94,0x5b3f2a,1.5708,0,5);for(let i=-3;i<=3;i++)S(x+i*.85+R(-.2,.2),2.62,z+d/2+.52,.07,R(.15,.45),.07,0xcfe4f0,0,0,0,9);
-S(x+1.8,4.2,z,.5,1.4,.5,0x6e3b2c);S(x+1.8,4.94,z,.6,.14,.6,0xcfd6da,0,0,1);for(const s of[-1,1]){S(x+s*3.21,1.6,z,.03,.9,.07,0x3f7391);S(x+s*3.21,1.6,z,.03,.07,1,0x3f7391)}
-for(const s of[-1,1]){S(x+s*3.17,1.6,z,.06,.9,1,0x9fc3d6);S(x+s*3.2,2.12,z,.08,.14,1.3,0x3f7391);S(x+s*3.2,1.08,z,.08,.14,1.3,0x3f7391)}
-houses.push([x-w/2,z-d/2,x+w/2,z+d/2]);
-loot('crate',x-1.8,z-1.4);if(Math.random()<.7)loot('crate',x+1.8,z-1.2)}
-function panelka(x,z,fl){const w=14,d=6,H=fl*2.4;S(x,H/2,z,w,H,d,0x8b8d88);solid(x,z,w,d);S(x,H+.15,z,w+.3,.3,d+.3,0xd5dce0);
-for(let f=0;f<fl;f++){S(x,f*2.4+.05,z,w+.08,.1,d+.08,0x5d605c);for(let i=0;i<6;i++)for(const s of[-1,1]){const lit=Math.random()<.03;S(x-5.5+i*2.2,f*2.4+1.4,z+s*(d/2+.03),1,1.1,.05,lit?0xe8b35a:Math.random()<.5?0x1a2025:0x35444e,0,lit?1:0);S(x-5.5+i*2.2,f*2.4+.8,z+s*(d/2+.07),1.14,.09,.16,0x666a66);S(x-5.5+i*2.2,f*2.4+1.4,z+s*(d/2+.07),.05,1.1,.03,0x666a66);if(f&&i%3===1&&s>0){S(x-5.5+i*2.2,f*2.4+.45,z+d/2+.45,1.5,.75,.85,0x8b8d88);S(x-5.5+i*2.2,f*2.4+.86,z+d/2+.45,1.56,.08,.9,0xd5dce0,0,0,1)}}}
-for(const i of[-4,4]){S(x+i,1,z+d/2+.08,1.4,2,.1,0x4a2f25);S(x+i,2.25,z+d/2+.5,2,.15,1,0x666a66)}
-loot('crate',x-6,z+d/2+1);loot('metal',x+6.5,z+d/2+1.2)}
+/* ---------- здания: общие детали ---------- */
+const ROADS=[-72,0,72];
+const isRoad=(x,z)=>ROADS.some(r=>Math.abs(x-r)<3.5||Math.abs(z-r)<3);
+const nearRoad=(x,z,m)=>ROADS.some(r=>Math.abs(x-r)<m||Math.abs(z-r)<m);
+const inRect=(h,x,z,m=0)=>x>h[0]-m&&x<h[2]+m&&z>h[1]-m&&z<h[3]+m;
+const houseOf=(x,z)=>houses.find(h=>inRect(h,x,z));
+const reserved=(x,z,m)=>houses.some(h=>inRect(h,x,z,m));
+/* постройщик в своих координатах: u вдоль фасада, v в глубину, вход со стороны +v; dir: 0 +z, 1 +x, 2 -z, 3 -x */
+function Kit(cx,cz,dir){const yaw=dir*1.5708;
+const P_=(u,v)=>dir===0?[cx+u,cz+v]:dir===1?[cx+v,cz-u]:dir===2?[cx-u,cz-v]:[cx-v,cz+u];
+const K={cx,cz,dir,yaw,P:P_,
+b(u,y,v,su,sy,sv,c,mt,me=0,yw=0,glow=0){const[x,z]=P_(u,v);S(x,y,z,su,sy,sv,c,yaw+yw,glow,me,mt)},
+solid(u,v,su,sv,top=0,hy0=0,hy1=0){const[x,z]=P_(u,v);solid(x,z,dir%2?sv:su,dir%2?su:sv,top,hy0,hy1)},
+/* мебель: блок с препятствием */
+f(u,v,su,h,sv,c,mt,y0=0){K.b(u,y0+h/2+.06,v,su,h,sv,c,mt);K.solid(u,v,su,sv,y0+h)},
+loot(t,u,v){const[x,z]=P_(u,v);loot(t,x,z)},
+item(u,v,list){const[x,z]=P_(u,v);spots.push({x,z,list})}};return K}
+/* стена вдоль u (along=1) или v с проёмами [центр, ширина, 'd'|'w'] */
+function wallRun(K,along,fix,from,to,H,col,mt,ops=[],o={}){const th=o.th||.28;
+const piece=(a,b,y0,y1)=>{if(b-a<.02||y1-y0<.02)return;const c=(a+b)/2,l=b-a;K.b(along?c:fix,(y0+y1)/2,along?fix:c,along?l:th,y1-y0,along?th:l,col,mt);
+if(o.logs)for(let h=.4;h<H;h+=.55)if(h>y0&&h<y1)K.b(along?c:fix,h,along?fix:c,along?l:th+.05,.06,along?th+.05:l,o.logs,3)};
+const sol=(a,b,hy0=0,hy1=0)=>{if(b-a<.02)return;const c=(a+b)/2;K.solid(along?c:fix,along?fix:c,along?b-a:th,along?th:b-a,H,hy0,hy1)};
+const bar=(c,y,len,h,col2,mt2=3,t=th+.08)=>K.b(along?c:fix,y,along?fix:c,along?len:t,h,along?t:len,col2,mt2);
+let at=from;for(const[c,w,type]of[...ops].sort((a,b)=>a[0]-b[0])){const a=c-w/2,b=c+w/2;piece(at,a,0,H);sol(at,a);
+const trim=o.trim||0x4a2f25;
+if(type==='d'){piece(a,b,2.32,H);bar(c,2.36,w+.2,.1,trim);for(const e of[a,b])bar(e,1.16,.1,2.32,trim)}
+else{piece(a,b,0,.98);piece(a,b,2.12,H);sol(a,b,.98,2.12);bar(c,.98,w+.14,.08,trim);bar(c,2.12,w+.14,.1,trim);for(const e of[a,b])bar(e,1.55,.08,1.14,trim);
+bar(c,1.55,.05,1.14,trim,3,.07);bar(c,1.6,w,.05,trim,3,.07);if(Math.random()<.5)bar(c-w/4,1.87,w/2-.08,.46,0x35444e,9,.03)}at=b}
+piece(at,to,0,H);sol(at,to)}
+/* коробка здания: пол, стены, крыша. o.front/back/left/right: списки проёмов */
+function shell(K,W,D,H,o){const w2=W/2,d2=D/2,col=o.col,mt=o.mt,q={logs:o.logs,trim:o.trim};
+wallRun(K,1,d2-.14,-w2,w2,H,col,mt,o.front,q);wallRun(K,1,-d2+.14,-w2,w2,H,col,mt,o.back,q);
+wallRun(K,0,-w2+.14,-d2+.28,d2-.28,H,col,mt,o.left,q);wallRun(K,0,w2-.14,-d2+.28,d2-.28,H,col,mt,o.right,q);
+K.b(0,.035,0,W,.06,D,o.floor||0x3c2b1e,o.floorMt===undefined?3:o.floorMt);
+if(o.roof==='gable'){const rh=o.rh||1.6;K.b(0,H+rh/2-.04,0,D+1,rh,W+.7,o.roofCol||0x4a3328,3,5,1.5708);K.b(0,H+rh/2+.12,0,D+1.04,rh-.1,W+.9,0xcfd6da,1,5,1.5708);K.b(0,H+rh/2-.18,0,D-.1,rh-.4,W+.94,col,mt,5,1.5708);
+for(let i=-Math.floor(W/2);i<=W/2;i++)K.b(i*.85+R(-.2,.2),H-.18,d2+.5,.06,R(.15,.42),.06,0xcfe4f0,9)}
+else if(o.roof==='flat'){K.b(0,H+.12,0,W+.3,.24,D+.3,0x55585a,4);K.b(0,H+.29,0,W+.34,.1,D+.34,0xd5dce0,1)}
+const h=K.dir%2?[K.cx-d2,K.cz-w2,K.cx+d2,K.cz+w2]:[K.cx-w2,K.cz-d2,K.cx+w2,K.cz+d2];h.doors=[];h.kind=o.kind;
+for(const[key,list]of[['front',o.front],['back',o.back]])for(const[c,wd,t]of list||[])if(t==='d'){const s=key==='front'?1:-1;h.doors.push({in:K.P(c,s*(d2-1)),out:K.P(c,s*(d2+1))});
+/* распахнутая дверь и крыльцо */
+const leaf=Math.min(wd,1.7);K.b(c-wd/2-.06,1.16,s*(d2+leaf/2*.94),.08,2.26,leaf-.1,o.door||0x4a2f25,3);K.b(c-wd/2,1.1,s*(d2+leaf-.3),.14,.05,.1,0xc59a3c,10);K.b(c,.04,s*(d2+.45),wd+.4,.08,.9,0x55504a,3)}
+houses.push(h);return h}
+/* вывеска из «пикселей» */
+const FONT={'П':['111','101','101','101','101'],'Р':['111','101','111','100','100'],'О':['111','101','101','101','111'],'Д':['0110','0110','1010','1010','1111'],'У':['101','101','111','001','111'],'К':['101','101','110','101','101'],'Т':['111','010','010','010','010'],'Ы':['10001','10001','11101','10101','11101'],'А':['111','101','111','101','101'],'Е':['111','100','111','100','111'],'Л':['0111','0101','0101','0101','1001'],'И':['1001','1001','1011','1101','1001'],'Ц':['1010','1010','1010','1010','1111'],'Я':['0111','0101','0111','0101','1001'],'Ш':['10101','10101','10101','10101','11111'],'М':['10001','11011','10101','10001','10001'],'Н':['101','101','111','101','101'],'С':['111','100','100','100','111'],'Б':['111','100','111','101','111'],'Ч':['101','101','111','001','001'],'Г':['111','100','100','100','100'],'Ж':['10101','10101','01110','10101','10101'],'Й':['1011','1001','1011','1101','1001'],'В':['110','101','110','101','110'],'З':['111','001','011','001','111'],'Ь':['100','100','111','101','111']};
+function sign(K,text,v,y,bg,fg){const px=.085,gl_=[...text].map(c=>FONT[c]).filter(Boolean),tw=gl_.reduce((s,g)=>s+g[0].length+1,-1)*px;
+K.b(0,y,v,tw+.36,.62,.08,bg,5);K.b(0,y+.34,v,tw+.42,.07,.14,0xd5dce0,1);let u=-tw/2;
+for(const g of gl_){for(let r=0;r<5;r++)for(let i=0;i<g[r].length;i++)if(g[r][i]==='1')K.b(u+i*px+px/2,y+(2-r)*px,v+.05,px*.96,px*.96,.025,fg,7);u+=(g[0].length+1)*px}}
+/* ---------- мебель ---------- */
+const table=(K,u,v,su=1.2,sv=.8,c=0x6a4628)=>{K.b(u,.8,v,su,.07,sv,c,3);for(const a of[-1,1])for(const b of[-1,1])K.b(u+a*(su/2-.08),.42,v+b*(sv/2-.08),.08,.72,.08,0x3c2b1e,3);K.solid(u,v,su,sv,.84)};
+const chair=(K,u,v,s=1)=>{K.b(u,.48,v,.42,.06,.42,0x5b3f2a,3);for(const a of[-.16,.16])for(const b of[-.16,.16])K.b(u+a,.26,v+b,.05,.42,.05,0x33231a,3);K.b(u,.8,v+s*.19,.42,.6,.05,0x5b3f2a,3)};
+const bed=(K,u,v,su=1.1,sv=2,c=0x6a3530,fr=0x4a2f25)=>{K.b(u,.3,v,su,.3,sv,fr,3);K.b(u,.52,v,su-.1,.18,sv-.1,0xb0a894,7);K.b(u,.63,v+.2,su-.06,.07,sv-.5,c,7);K.b(u,.66,v-sv/2+.3,su-.3,.14,.4,0xd8d4c8,7,1);K.b(u,.55,v-sv/2,su+.06,.9,.08,fr,3);K.solid(u,v,su,sv,.7)};
+const cabinet=(K,u,v,su,sv,c=0x4a3328,h=1.9)=>{K.f(u,v,su,h,sv,c,3);const alongU=su>sv;for(const s of[-1,1])for(const k of[-.07,.07])K.b(alongU?u+k:u+s*(su/2+.015),1.1,alongU?v+s*(sv/2+.015):v+k,.04,.2,.04,0xc59a3c,10)};
+const GOODS=[0x8c2418,0x6a7a30,0xc9a238,0x3d5570,0xd8cfa8,0x9aa0a4,0x7a4a20];
+function rack(K,u,v,su,sv,full=.6,goods=GOODS){const alongU=su>sv,L=alongU?su:sv;for(const e of[-1,1])K.b(alongU?u+e*(su/2-.04):u,1,alongU?v:v+e*(sv/2-.04),alongU?.06:su,1.9,alongU?sv:.06,0x666a6e,5);
+for(const y of[.35,.9,1.45,1.95]){K.b(u,y,v,su,.05,sv,0x767a7e,5);if(y<1.9)for(let s=-L/2+.25;s<L/2-.15;s+=.34)if(Math.random()<full){const h=R(.12,.34),g=goods[Math.random()*goods.length|0];K.b(alongU?u+s:u,y+h/2+.03,alongU?v:v+s,R(.14,.27),h,R(.14,.27),g,7,Math.random()<.4?2:0)}}K.solid(u,v,su,sv,2)}
+const counter=(K,u,v,su,sv,c=0x5a4a40)=>{K.f(u,v,su,.95,sv,c,3);K.b(u,1.05,v,su+.1,.07,sv+.1,0x33231a,3);K.b(u+su/4,1.22,v,.34,.26,.3,0x2c2c2c,5);K.b(u-su/4,1.13,v,.3,.07,.22,0xd8cfa8,7)};
+const barrel=(K,u,v,c=0x486050)=>{K.b(u,.52,v,.62,.92,.62,c,5,2);for(const y of[.25,.8])K.b(u,y,v,.65,.05,.65,0x33363a,5,2);K.solid(u,v,.6,.6,1)};
+const tires=(K,u,v)=>{for(let i=0;i<4;i++)K.b(u+R(-.04,.04),.18+i*.23,v+R(-.04,.04),.75,.22,.75,0x151515,7,2);K.solid(u,v,.75,.75,1)};
+const boxes=(K,u,v)=>{K.b(u,.36,v,.7,.6,.7,0x8a6a3c,3,0,R(-.2,.2));K.b(u+R(-.1,.1),.9,v,.5,.48,.5,0x7a5a30,3,0,R(-.4,.4));K.solid(u,v,.72,.72,1.15)};
+const rug=(K,u,v,su,sv,c)=>{K.b(u,.072,v,su,.012,sv,c,7);K.b(u,.075,v,su-.2,.012,sv-.2,0x9a7a58,7);K.b(u,.078,v,su-.4,.012,sv-.4,c,7)};
+const picture=(K,u,y,v,su,sv,c)=>{K.b(u,y,v,su,.7,sv,0x33231a,3);K.b(u,y,v,su>sv?su-.12:sv+.02,.58,su>sv?sv+.02:sv-.12,c,7)};
+const lamp=(K,u,v,H)=>{K.b(u,H-.22,v,.03,.4,.03,0x111111,5);K.b(u,H-.46,v,.16,.14,.16,0xe8c878,0,3,0,.75)};
+/* ---------- виды зданий ---------- */
+const FOOD=['can','bread','can','dirty','clean'],HOME=['cloth','bread','wood','can','dirty','a9','shot','bandage'],MED=['bandage','bandage','clean','bandage','cloth'],TOOL=['metal','metal','wood','wood','cloth'],AMMOL=['a9','a9','shot','a545','bandage','metal'];
+const WINS=(...a)=>a.map(c=>[c,1.2,'w']);
+const BUILD={
+izba(K){const col=[0x5b3f2a,0x4a3328,0x5a4a40,0x4a3b30][Math.random()*4|0];
+shell(K,7,6,2.9,{kind:'izba',col,mt:3,logs:0x33231a,trim:0x3f7391,roof:'gable',front:[[0,1.7,'d'],...WINS(-2.3,2.3)],back:WINS(.9),left:WINS(0),right:WINS(.7)});
+K.b(2.1,3.9,-.6,.5,1.6,.5,0x6e3b2c,4);K.b(2.1,4.74,-.6,.62,.14,.62,0xcfd6da,1);
+/* русская печь */
+K.f(-2.45,-1.95,1.5,1.25,1.4,0xb9b2a3,4);K.b(-2.45,1.8,-2.25,.8,.95,.7,0xb9b2a3,4);K.b(-1.69,.75,-1.95,.03,.5,.6,0x151515,0);K.b(-1.68,.55,-1.95,.03,.1,.4,0xff8830,0,0,0,.55);K.b(-1.62,.96,-1.95,.18,.06,.75,0x6e3b2c,4);
+bed(K,2.65,-1.65,1,1.9);table(K,-2.5,1.3,1,1.2);chair(K,-1.65,1.3,-1);cabinet(K,.0,-2.45,1.1,.45);rug(K,.2,.1,2,2.4,0x6a2a22);picture(K,-.9,1.7,-2.69,.7,.06,0x486050);picture(K,-3.19,1.75,-.5,.06,.6,0x9a8f6a);
+K.b(-2.5,.95,1.3,.22,.24,.22,0x9aa0a4,5,2);lamp(K,0,0,2.9);
+K.item(.1,-1.5,FOOD);K.item(1.35,.3,HOME);K.item(-1.1,2,MED.concat(HOME));K.item(1.5,-2.2,HOME);
+K.loot('crate',2.6,1.9)},
+shop(K){shell(K,10,8,3.2,{kind:'shop',col:0x9a8f6a,mt:4,roof:'flat',floor:0x666a66,floorMt:4,front:[[0,1.9,'d'],[-3,1.9,'w'],[3,1.9,'w']],back:[],left:WINS(.5),right:WINS(.5)});sign(K,'ПРОДУКТЫ',4.14,2.78,0x7b2f25,0xf0e8d0);
+rack(K,0,-3.45,7.6,.55,.45);counter(K,-3.1,-1.6,2.6,.7);rack(K,1.6,.2,.6,3,.5);rack(K,3.7,.2,.6,3,.35);cabinet(K,-4.4,1.4,.65,1.5,0x9aa0a4);lamp(K,-1.5,0,3.2);lamp(K,2.6,0,3.2);
+K.item(-1.4,-2.5,FOOD);K.item(2.65,-.6,FOOD);K.item(2.65,1.1,FOOD);K.item(-.2,.4,FOOD);K.item(-3.1,-2.6,['bread','can','a9','shot']);K.item(-2.5,2,['clean','dirty']);K.loot('crate',4.2,-2.4)},
+apteka(K){shell(K,8,7,3.2,{kind:'apteka',col:0xd8d4c8,mt:4,roof:'flat',floor:0x8b8d88,floorMt:4,trim:0x486050,front:[[0,1.7,'d'],[-2.5,1.6,'w'],[2.5,1.6,'w']],back:[],left:WINS(0),right:WINS(0)});sign(K,'АПТЕКА',3.64,2.78,0xd9d8d0,0x1e7a3a);
+const W_=[0xe8e5dc,0x3d7a5a,0x3d5570,0xb83a30];rack(K,-1,-2.95,4.4,.5,.55,W_);cabinet(K,2.9,-2.7,1.3,.55,0xd8d4c8);counter(K,-.6,-1.3,3.6,.65,0xb9b2a3);rack(K,3.4,.5,.5,2.2,.4,W_);lamp(K,0,.4,3.2);
+K.item(-2.6,-2.1,MED);K.item(1.9,-1.9,MED);K.item(-2.8,.8,MED);K.item(1.5,.7,MED);K.loot('crate',2.4,-1.8)},
+police(K){shell(K,12,9,3.1,{kind:'police',col:0x7d8590,mt:4,roof:'flat',floor:0x55504a,front:[[-2.5,1.7,'d'],[1.5,1.2,'w'],[4,1.2,'w']],back:[[4,1.1,'w']],left:WINS(1.8,-2.2),right:WINS(1.8)});sign(K,'ПОЛИЦИЯ',4.64,2.72,0x1f3a6a,0xf0f0f0);
+wallRun(K,1,-.7,-5.72,5.72,3.1,0x9aa0a4,4,[[-2.5,1.6,'d']]);wallRun(K,0,.4,-4.22,-.84,3.1,0x9aa0a4,4,[[-2.5,1.5,'d']]);
+/* решётка камеры */
+for(let u=2;u<5.7;u+=.16)K.b(u,1.4,1.3,.04,2.7,.04,0x33363a,5);for(const y of[.2,1.4,2.7])K.b(3.85,y,1.3,3.75,.07,.07,0x33363a,5);K.solid(3.85,1.3,3.75,.1,2.8,.2,2.7);bed(K,4.9,-.0,.9,1.1,0x55504a,0x33363a);
+table(K,-4.6,1.7,1.5,.85);chair(K,-4.6,2.5);table(K,.3,2.3,1.5,.85);chair(K,.3,1.5,-1);cabinet(K,-5.4,-2.4,.55,2.4,0x486050);
+rack(K,3.2,-3.95,4.2,.5,.45,[0x56642f,0x2e3320,0x6a5236]);cabinet(K,5.4,-2.2,.5,1.8,0x56642f);picture(K,-.8,1.8,-.53,1.2,.06,0x3d5570);lamp(K,-2.5,1.7,3.1);lamp(K,3,-2.5,3.1);
+K.item(-3.6,-2.6,AMMOL);K.item(2.4,-2.4,AMMOL);K.item(4.2,-2.8,AMMOL);K.item(1.6,-1.6,['a545','shot','a9']);K.item(-2,3,HOME);K.item(3.2,.3,MED);K.loot('crate',-1.5,-3.6);K.loot('crate',2.2,-1.4)},
+school(K){shell(K,20,10,3.3,{kind:'school',col:0x6e3b2c,mt:4,roof:'flat',trim:0xd8d4c8,floor:0x5a4a40,front:[[0,2,'d'],...WINS(-8,-5.5,-3,3,5.5,8)],back:WINS(-7.5,-4,4,7.5),left:WINS(-2,2.5),right:WINS(-2,2.5)});sign(K,'ШКОЛА',5.14,2.9,0xb9b2a3,0x6a2018);
+wallRun(K,1,1.4,-9.72,9.72,3.3,0xb9b2a3,4,[[-3.5,1.7,'d'],[3.5,1.7,'d']]);wallRun(K,0,0,-4.72,1.26,3.3,0xb9b2a3,4,[]);
+for(const s of[-1,1]){K.b(s*9.66,1.8,-1.7,.06,1.2,2.8,0x1f3a2e,7);for(let i=0;i<3;i++)for(const v of[-2.9,-.9]){const u=s*(3+i*1.9);table(K,u,v,1,.6,0x8a6a3c);chair(K,u+s*.0,v+.55)}cabinet(K,s*.6,-3.6,.5,1.6)}
+for(const u of[-8,7.5])K.f(u,4.1,1.9,.45,.45,0x486050,3);cabinet(K,-9.4,2.4,.5,1.1);lamp(K,-5,-1.7,3.3);lamp(K,5,-1.7,3.3);lamp(K,0,3.1,3.3);
+K.item(-6,3,HOME);K.item(5,2.9,MED);K.item(-1.5,-1.8,['bread','can','cloth']);K.item(1.5,-3,['cloth','clean','bread']);K.item(-8.7,-1.8,TOOL);K.item(8.7,-3.8,HOME);K.loot('crate',9.2,4);K.loot('crate',-9,-4.1)},
+medpunkt(K){shell(K,10,8,3.1,{kind:'med',col:0xb9b2a3,mt:4,roof:'flat',trim:0x7b2f25,floor:0x8b8d88,floorMt:4,front:[[0,1.7,'d'],...WINS(-3,3)],back:WINS(-2,2),left:WINS(0),right:WINS(0)});sign(K,'МЕДПУНКТ',4.14,2.72,0xe8e5dc,0xb02020);
+for(const u of[-3.9,-2,2,3.9])bed(K,u,-2.6,.9,1.9,0x9aa8b0,0x9aa0a4);cabinet(K,0,-3.45,1.4,.5,0xd8d4c8);table(K,-3.6,2.1,1.5,.8,0xb9b2a3);chair(K,-3.6,2.9);rack(K,4.45,1.6,.5,2.4,.4,[0xe8e5dc,0xb83a30,0x3d5570]);lamp(K,-2,0,3.1);lamp(K,2,0,3.1);
+K.item(-1,-1.5,MED);K.item(1,-2.3,MED);K.item(3,.2,MED);K.item(-2,.7,MED.concat(['can']));K.loot('crate',3.3,2.9)},
+post(K){shell(K,8,7,3.1,{kind:'post',col:0x3d5570,mt:4,roof:'gable',rh:1.4,trim:0xd8d4c8,front:[[0,1.7,'d'],...WINS(-2.6,2.6)],back:[],left:WINS(0),right:WINS(0)});sign(K,'ПОЧТА',3.64,2.68,0xd8d4c8,0x1f3a6a);
+counter(K,-.9,-.9,4,.65);rack(K,-.4,-2.95,5,.5,.5,[0x8a6a3c,0x7a5a30,0xd8cfa8]);boxes(K,3.1,-2.5);boxes(K,-3.2,2.4);K.f(3.35,.9,.5,.45,2,0x4a2f25,3);lamp(K,0,.5,3.1);
+K.item(1.9,-1.9,HOME);K.item(-2.6,-1.8,HOME);K.item(1.6,1.2,FOOD);K.item(-1.8,1,TOOL);K.loot('crate',2.4,2.6)},
+canteen(K){shell(K,11,8,3.2,{kind:'canteen',col:0x7a8a6a,mt:4,roof:'flat',trim:0xd8d4c8,front:[[0,1.8,'d'],...WINS(-3.5,3.5)],back:WINS(3.8),left:WINS(1),right:WINS(1)});sign(K,'СТОЛОВАЯ',4.14,2.78,0xd8cfa8,0x6a2018);
+counter(K,-1.8,-2,5,.7,0x9aa0a4);rack(K,-2.2,-3.45,4.4,.5,.45);cabinet(K,2.4,-3.4,1.1,.65,0xd8d4c8);for(const u of[-3.6,-1.7,2,3.9])for(const v of[.2,2.2]){if(Math.abs(u)<2.2&&v>1)continue;table(K,u,v,.9,.9);chair(K,u,v+.65);chair(K,u,v-.65,-1)}lamp(K,-2.5,.5,3.2);lamp(K,2.5,.5,3.2);
+K.item(-4.4,-2.8,FOOD);K.item(.2,-2.8,FOOD);K.item(.3,-.4,FOOD);K.item(4.6,-1.8,FOOD);K.loot('crate',4.6,-3.1)},
+garage(K){shell(K,7,8,3.1,{kind:'garage',col:0x666a6e,mt:5,roof:'flat',floor:0x45494c,floorMt:2,front:[[0,3.6,'d']],back:[],left:WINS(1),right:[]});sign(K,'ГАРАЖ',4.14,2.72,0x33363a,0xd8b040);
+table(K,-2.65,-2,1,2.4,0x55504a);for(let i=0;i<6;i++)K.b(R(-3,-2.3),.9,R(-3,-1),R(.1,.3),.07,R(.06,.2),0x9a9ea2,14);rack(K,.7,-3.45,3.6,.5,.4,[0x7b2f25,0x9aa0a4,0x33363a]);tires(K,2.7,-2.4);barrel(K,2.75,-.9,0x7b2f25);barrel(K,2.75,1.6);K.b(0,.075,.4,1.3,.014,2.6,0x151515,8);lamp(K,0,0,3.1);
+K.item(-1.2,-1.8,TOOL);K.item(1.3,-1.9,TOOL);K.item(-1.5,1,TOOL);K.item(1.4,.6,TOOL.concat(['shot']));K.loot('metal',-2.5,2.4);K.loot('crate',1,-2.4)},
+barn(K){shell(K,9,8,3.2,{kind:'barn',col:0x4a3b30,mt:3,logs:0x2b1d14,roof:'gable',rh:2.2,floor:0x5a4a30,front:[[0,2.6,'d']],back:[[2,1.4,'d']],left:WINS(0),right:WINS(0)});
+const hay=(u,v,y)=>K.b(u,y,v,1.2,.6,.8,0xa88a40,7,1,R(-.15,.15));for(const[u,v]of[[-3.4,-3],[-2.1,-3],[-3.4,-2],[-3.4,2.6],[3.4,2.7]]){hay(u,v,.36);K.solid(u,v,1.2,.8,.7)}hay(-3.4,-3,.96);hay(-2.7,-3,1.5);
+barrel(K,3.7,-2.8,0x4a3b30);boxes(K,3.5,-1.5);for(const u of[-4.1,4.1])K.b(u,1.6,1.4,.08,1.9,.08,0x6a4628,3);for(let i=0;i<30;i++)K.b(R(-3.8,3.8),.08,R(-3.3,3.3),R(.2,.6),.02,.04,0xa88a40,7,0,R(0,3));lamp(K,0,0,3.2);
+K.item(-1.2,-1.4,TOOL);K.item(.4,-2.6,['wood','wood','shot']);K.item(-2,1,FOOD.concat(TOOL));K.item(2,.7,TOOL);K.loot('crate',2.2,-2.8)},
+warehouse(K){shell(K,14,11,3.5,{kind:'sklad',col:0x55585a,mt:5,roof:'flat',floor:0x666a66,floorMt:4,front:[[0,3.2,'d'],...WINS(-5,5)],back:[[-5,1.5,'d']],left:WINS(-2.5,2.5),right:WINS(-2.5,2.5)});sign(K,'СКЛАД',5.64,3,0x33363a,0xd8d4c8);
+for(const u of[-4.2,-1.6,1.8,4.4])rack(K,u,-.9,.7,5,.5,[0x8a6a3c,0x7a5a30,0x56642f,0x9aa0a4]);for(const[u,v]of[[6,-4.6],[6,-3.7],[5,-4.6],[-6,2.6],[6,3.4],[-1,-4.6]])boxes(K,u,v);barrel(K,-6.2,3.7);barrel(K,-5.4,4.4,0x7b2f25);lamp(K,-3,2.5,3.5);lamp(K,3,2.5,3.5);lamp(K,0,-2,3.5);
+K.item(-2.9,-.5,TOOL);K.item(.1,-1.8,FOOD);K.item(3.1,.4,AMMOL);K.item(-5.6,-1,TOOL);K.item(5.6,.2,HOME);K.item(1,3,FOOD);K.loot('crate',3.1,-4.5);K.loot('crate',-3,-4.4);K.loot('metal',3.5,3.9)},
+club(K){shell(K,14,12,4,{kind:'club',col:0xa88a58,mt:4,roof:'gable',rh:2.2,trim:0xe8e5dc,floor:0x4a2f25,front:[[0,2.2,'d'],...WINS(-5,-3,3,5)],back:[],left:WINS(-2,1,4),right:WINS(-2,1,4)});sign(K,'КЛУБ',6.14,3.1,0x7b2f25,0xf0e0a0);
+for(const u of[-2.6,-1.6,1.6,2.6])K.b(u,1.9,6.35,.35,3.8,.35,0xe8e5dc,4,2);
+K.f(0,-4.6,9,.55,2.2,0x4a2f25,3);for(const s of[-1,1])K.b(s*4.1,2.2,-4.5,.8,3,1.9,0x7a1c18,7,1);K.b(0,3.6,-4.5,9,.5,1.9,0x7a1c18,7,1);picture(K,0,2.1,-5.68,2.6,.06,0x7a1c18);K.f(1.5,-4.4,.5,1,.4,0x5b3f2a,3,.55);
+for(const v of[-2,-.4,1.2,2.8])for(const s of[-1,1]){K.f(s*3.2,v,3.6,.4,.42,0x6a2a22,7);K.b(s*3.2,.75,v+.2,3.6,.5,.06,0x4a2f25,3)}lamp(K,-3,0,4);lamp(K,3,0,4);
+K.item(-5.8,-4.2,HOME);K.item(5.9,-4,MED);K.item(0,-2.6,FOOD);K.item(-6,3,HOME);K.item(5.9,1.2,AMMOL);K.loot('crate',-5.6,4.8);K.loot('crate',6,-2)},
+banya(K){shell(K,5,5,2.6,{kind:'banya',col:0x4a3328,mt:3,logs:0x2b1d14,roof:'gable',rh:1.2,front:[[.6,1.5,'d']],back:[],left:WINS(0),right:[]});
+K.f(-1.6,-1.55,1.1,.8,1.1,0x33363a,5);K.b(-1.6,1.8,-1.8,.25,1.7,.25,0x33363a,5,2);for(let i=0;i<8;i++)K.b(-1.6+R(-.4,.4),.95,-1.55+R(-.4,.4),.22,.18,.22,0x55585a,4,3);K.f(1.3,-1.75,1.9,.45,.7,0x9a6a3c,3);barrel(K,-1.75,1.5,0x6a4628);lamp(K,0,0,2.6);
+K.item(.3,-.5,['clean','cloth','dirty']);K.item(1.3,.4,['wood','bandage','clean'])},
+church(K){shell(K,10,12,5,{kind:'church',col:0xb9b2a3,mt:4,trim:0xd8d4c8,floor:0x6e3b2c,floorMt:4,front:[[0,2.2,'d'],...WINS(-3.2,3.2)],back:[],left:WINS(-2.5,1,4),right:WINS(-2.5,1,4)});
+K.b(0,5.35,0,10.3,.8,12.3,0xcfd6da,1,5);K.b(0,4.91,0,9.9,.06,11.9,0xa9a294,4);K.b(0,5.2,0,10.1,.4,12.1,0xa9a294,4);
+K.b(0,6.6,0,3.6,2.8,3.6,0xa9a294,4);K.b(0,8.2,0,2.2,.6,2.2,0xa9a294,4,2);K.b(0,9.35,0,2.8,2.2,2.8,0x8a6a24,10,3);K.b(0,11,0,1.6,2,1.6,0x8a6a24,10,4);K.b(0,12.8,0,.1,1.6,.1,0xc9a238,10);K.b(0,13.1,0,.8,.1,.1,0xc9a238,10);
+for(const s of[-1,1]){K.b(s*3.4,6.3,4,1.2,1.4,1.2,0xb9b2a3,4,2);K.b(s*3.4,7.5,4,1.5,1.2,1.5,0x2f5a8a,5,3);K.b(s*3.4,8.35,4,.07,.7,.07,0xc9a238,10)}
+for(const s of[-1,1])for(const v of[-1.5,2]){K.b(s*2.4,2.5,v,.6,4.9,.6,0xd8d4c8,4,2);K.solid(s*2.4,v,.55,.55,4)}
+/* иконостас */
+K.f(0,-4.3,9.4,.35,.3,0x4a2f25,3);K.b(0,2,-4.5,9.4,3.4,.12,0x5b3f2a,3);for(let i=-4;i<=4;i++){K.b(i*1.02,1.55,-4.4,.78,1.25,.05,0xc9a238,10);K.b(i*1.02,1.55,-4.36,.6,1.05,.04,[0x7a2018,0x233a5a,0x2f4a2a][(i+4)%3],7);K.b(i*1.02,1.8,-4.33,.2,.2,.03,0xd8b078,7,3);K.b(i*1.02,2.9,-4.4,.55,.7,.05,0xc9a238,10)}
+for(const u of[-3.4,-1.6,1.6,3.4]){K.b(u,.65,-3.2,.12,1.2,.12,0xc9a238,10,2);K.b(u,1.27,-3.2,.45,.05,.45,0xc9a238,10,2);for(let i=0;i<5;i++){const a=i*1.26;K.b(u+Math.sin(a)*.14,1.4,-3.2+Math.cos(a)*.14,.025,R(.1,.22),.025,0xe8d8a0,7,2);K.b(u+Math.sin(a)*.14,1.55,-3.2+Math.cos(a)*.14,.035,.06,.035,0xffb040,0,3,0,1)}K.solid(u,-3.2,.4,.4,1.3)}
+for(const s of[-1,1])K.f(s*4.3,.3,.5,.45,2.6,0x4a2f25,3);rug(K,0,1,1.6,6.5,0x6a1a18);
+K.item(-3.6,-2,MED);K.item(3.6,-2.2,['bread','clean','cloth']);K.item(-3.5,3.8,['bread','can','bandage']);K.item(1.2,-2.4,AMMOL);K.loot('crate',4,4.8);K.loot('crate',-3.9,-3.6)},
+panelka(K,fl){const W=18,D=9,wc=[0x8b8d88,0x9a948a,0x848a90][Math.random()*3|0];
+shell(K,W,D,2.7,{kind:'panelka',col:wc,mt:4,floor:0x55504a,front:[[-4.5,1.7,'d'],[4.5,1.7,'d'],...WINS(-7.2,-2,2,7.2)],back:WINS(-6.8,-2.2,2.2,6.8),left:WINS(-2.2,2),right:WINS(-2.2,2),door:0x3a4a30});
+/* верхние этажи */
+const H=fl*2.5+.2;K.b(0,2.7+(H-2.7)/2,0,W,H-2.7,D,wc,4);K.b(0,H+.15,0,W+.3,.3,D+.3,0xd5dce0,1);
+for(let f=1;f<fl;f++){K.b(0,f*2.5+.2,0,W+.08,.1,D+.08,0x5d605c,4);for(let i=0;i<7;i++)for(const s of[-1,1]){const u=-7.2+i*2.4,lit=Math.random()<.03;K.b(u,f*2.5+1.55,s*(D/2+.03),1.1,1.15,.05,lit?0xe8b35a:Math.random()<.5?0x1a2025:0x35444e,lit?0:9,0,0,lit?1:0);K.b(u,f*2.5+.94,s*(D/2+.07),1.24,.09,.16,0x666a66,4);K.b(u,f*2.5+1.55,s*(D/2+.07),.05,1.15,.03,0x666a66,4);
+if(i%3===1&&s>0){K.b(u,f*2.5+.55,D/2+.45,1.6,.75,.85,wc,4);K.b(u,f*2.5+.96,D/2+.45,1.66,.08,.9,0xd5dce0,1)}}}
+for(const s of[-4.5,4.5])K.b(s,2.52,D/2+.55,2.4,.14,1.2,0x666a66,4);
+/* две квартиры на первом этаже */
+const in_=0x9a948a;wallRun(K,0,0,-4.22,4.22,2.7,in_,4,[[1.8,1.5,'d']]);
+for(const s of[-1,1]){wallRun(K,1,0,s<0?-8.72:.14,s<0?-.14:8.72,2.7,in_,4,[[s*2.4,1.5,'d']]);wallRun(K,0,s*4.5,-4.22,-.14,2.7,in_,4,[[-1.7,1.4,'d']]);
+bed(K,s*8,-3.1,1.2,2.1,s<0?0x6a3530:0x3d5570);cabinet(K,s*5.1,-3.7,.55,.9);rug(K,s*6.8,-1.7,2,1.8,0x6a2a22);picture(K,s*6.6,1.7,-4.2,1.1,.06,0x486050);
+table(K,s*1.3,-3.3,1.1,1);chair(K,s*1.3,-2.45);cabinet(K,s*3.9,-3.9,.9,.55,0xd8d4c8,1.6);K.f(s*2.65,-3.9,1,.9,.55,0x9aa0a4,5);
+K.f(s*8.1,2.3,.9,.45,2,0x486050,7);K.b(s*8.5,.75,2.3,.18,.6,2,0x486050,7);cabinet(K,s*.5,3.5,.45,1.2);table(K,s*6.7,2.3,.8,1.1);lamp(K,s*4.5,2.2,2.7);lamp(K,s*2.2,-2,2.7);
+K.item(s*2.2,-1.2,FOOD);K.item(s*6.2,-3,HOME);K.item(s*6.4,.8,HOME.concat(MED));K.item(s*2.2,3,['a9','can','bandage','cloth','clean']);K.loot('crate',s*7.9,-.8)}
+const[x,z]=K.P(10.2,1);loot('metal',x,z)}};
+const SIZES={izba:[7,6],shop:[10,8],apteka:[8,7],police:[12,9],school:[20,10],medpunkt:[10,8],post:[8,7],canteen:[11,8],garage:[7,8],barn:[9,8],warehouse:[14,11],club:[14,12],banya:[5,5],church:[10,12],panelka:[18,9]};
+/* застройка: [вид, x, z, куда смотрит вход, этажи] */
+const PLAN=[
+['izba',-14,14,1],['izba',-27,13,2],['izba',-15,28,1],['izba',-31,28,0],['banya',-42,16,2],['barn',-48,31,1],['school',-27,52,2],['izba',-55,13,2],
+['shop',14,13,3],['apteka',14,27,3],['post',14,45,3],['izba',30,13,2],['izba',43,14,2],['panelka',31,32,2,4],['panelka',53,40,2,5],['club',30,55,2],['izba',57,16,2],
+['izba',14,-14,3],['izba',27,-13,0],['izba',15,-29,3],['izba',40,-13,0],['police',18,-50,3],['church',38,-46,0],['izba',55,-13,0],['garage',58,-30,3],['warehouse',56,-55,3],
+['canteen',-13,-12,1],['panelka',-27,-25,0,5],['panelka',-52,-38,0,5],['medpunkt',-14,-48,1],['izba',-42,-13,0],['garage',-30,-50,0],['garage',-39,-50,0],['izba',-57,-14,0],
+['izba',-118,86,2],['izba',-103,88,2],['izba',-88,86,2],['izba',-58,86,2],['banya',-46,88,2],['izba',-33,86,2],['izba',16,86,2],['izba',31,88,2],['barn',47,89,2],['barn',61,88,2],['izba',90,88,2],['izba',108,86,2],
+['warehouse',-110,-90,0],['warehouse',-54,-90,0],['garage',-34,-87,0],['garage',-24,-87,0],['shop',17,-87,0],['panelka',38,-89,0,5],['panelka',59,-89,0,4],['police',92,-89,0],['izba',113,-87,0],
+['izba',-86,-52,1],['izba',-86,-33,1],['shop',-87,-15,1],['izba',-86,15,1],['izba',-86,31,1],['school',-88,52,1],['church',-108,-30,1],['barn',-108,18,1],
+['panelka',87,-48,3,5],['panelka',87,-24,3,4],['medpunkt',87,15,3],['club',90,35,3],['warehouse',89,57,3],['panelka',112,-30,3,5],['panelka',112,24,3,4],['canteen',110,50,3],
+['izba',-14,100,1],['izba',14,100,3],['izba',-14,117,1],['apteka',14,117,3],['barn',-15,-108,1],['garage',14,-110,3],['izba',-14,-124,1],['izba',14,-126,3],
+['izba',-50,115,0],['izba',-100,116,0],['barn',50,118,2],['garage',104,-116,0],['barn',-52,-120,0]];
+function house(type,x,z,dir,fl){BUILD[type](Kit(x,z,dir),fl);houses[houses.length-1].type=type}
 function birch(x,z){const h=R(4,7);S(x,h/2,z,.28,h,.28,0xd9d8d0,0,0,2);S(x,h+.5,z,.14,1.1,.14,0xd9d8d0,0,0,4);for(let i=0;i<7;i++){const a=R(0,6.28),y=h*R(.55,1.02),l=R(.7,1.5);S2(x+Math.sin(a)*l*.4,y+l*.2,z+Math.cos(a)*l*.4,.05,l,.05,0x4a3b30,a,R(.7,1.15),3)}
-for(let i=0;i<4;i++)solid(x,z,.35,.35);nodes.push({t:'tree',x,z,hp:3})}
+solid(x,z,.35,.35);nodes.push({t:'tree',x,z,hp:3})}
 function spruce(x,z,k){S(x,.7*k,z,.36*k,1.4*k,.36*k,0x4a3b30,0,0,2);for(let i=0;i<5;i++){const w=(2.9-i*.48)*k,y=(1.5+i*.86)*k;S(x,y,z,w,1.5*k,w,0x24382c,i,0,4,11)}}
 function drift(x,z,w,h,d){S(x,0,z,w,h,d,0xcfd6da,R(0,3),0,3)}
 function car(x,z,a,c){S(x,.7,z,3.4,.6,1.6,c,a);S(x-.2*Math.cos(a),1.25,z+.2*Math.sin(a),1.7,.55,1.5,c,a);S(x-.2*Math.cos(a),1.3,z+.2*Math.sin(a),1.74,.34,1.4,0x1d262b,a);
 for(const i of[-1.1,1.1])for(const j of[-.75,.75]){const wx=x+i*Math.cos(a)+j*Math.sin(a),wz=z-i*Math.sin(a)+j*Math.cos(a);S2(wx,.37,wz,.74,.3,.74,0x151515,a,1.5708);S2(wx,.37,wz,.36,.33,.36,0x777777,a,1.5708,5)}
-S(x-.2*Math.cos(a),1.54,z+.2*Math.sin(a),1.64,.18,1.42,0xdfe5e8,a,0,1);S(x+1.2*Math.cos(a),1.02,z-1.2*Math.sin(a),.85,.14,1.3,0xdfe5e8,a,0,1);for(const j of[-.5,.5]){S(x+1.72*Math.cos(a)+j*Math.sin(a),.75,z-1.72*Math.sin(a)+j*Math.cos(a),.06,.18,.26,0xd9d2b0,a,0,1)}solid(x,z,2.4,2);loot('metal',x+2.3,z+1)}
-function church(x,z){S(x,2.5,z,7,5,7,0xb9b2a3);solid(x,z,7,7);S(x,6.5,z,3,3,3,0xa9a294);
-S(x,8.2,z,2,.5,2,0xa9a294,0,0,2);S(x,9.3,z,2.6,2.1,2.6,0x8a6a24,0,0,3);S(x,10.9,z,1.5,2,1.5,0x8a6a24,0,0,4);S(x,5.3,z,7.2,.8,7.2,0xcfd6da,0,0,5);S(x,12.8,z,.1,1.6,.1,0xc9a238);S(x,13.1,z,.8,.1,.1,0xc9a238);S(x,1.2,z+3.55,1.6,2.4,.1,0x2b1d14);loot('crate',x+2,z+4.6)}
+S(x-.2*Math.cos(a),1.54,z+.2*Math.sin(a),1.64,.18,1.42,0xdfe5e8,a,0,1);S(x+1.2*Math.cos(a),1.02,z-1.2*Math.sin(a),.85,.14,1.3,0xdfe5e8,a,0,1);for(const j of[-.5,.5]){S(x+1.72*Math.cos(a)+j*Math.sin(a),.75,z-1.72*Math.sin(a)+j*Math.cos(a),.06,.18,.26,0xd9d2b0,a,0,1)}solid(x,z,Math.abs(Math.cos(a))>.7?3.4:1.8,Math.abs(Math.cos(a))>.7?1.8:3.4,1.5);loot('metal',x+2.5,z+2.2)}
 function loot(t,x,z){nodes.push({t,x,z,hp:1,taken:0})}
-function build(){statics=[];solids=[];nodes=[];houses=[];
-S(0,-.5,0,SIZE*2+60,1,SIZE*2+60,0xc3ccd1);S(0,.005,0,7,.02,SIZE*2,0x45494c);S(0,.01,0,SIZE*2,.02,6,0x4b4e50);
-for(let i=-SIZE;i<SIZE;i+=5)S(0,.03,i,.2,.02,2,0xbdb9a5);
-for(const[x,z]of[[-14,14],[-26,13],[-15,28],[14,-14],[27,-13],[15,-28],[-40,-12],[42,15]])izba(x,z);
-panelka(-24,-24,5);panelka(-48,-34,5);panelka(26,30,4);panelka(48,40,5);church(34,-46);
+function build(){statics=[];solids=[];sgrid=new Map();nodes=[];houses=[];spots=[];
+const L=SIZE*2;S(0,-.5,0,L+60,1,L+60,0xc3ccd1);
+for(const r of ROADS){S(r,.005,0,7,.02,L,0x45494c);S(0,.01,r,L,.02,6,0x4b4e50);for(let i=-SIZE;i<SIZE;i+=5)if(!nearRoad(1000,i,4))S(r,.03,i,.2,.02,2,0xbdb9a5)}
+for(const p of PLAN)house(...p);
 car(2,-18,1.6,0x7b2f25);car(-2,22,1.4,0x486050);car(18,1.5,.1,0x9a8f6a);car(-34,-1,.3,0x3d5570);
+for(const[x,z,a,c]of[[70,40,1.5,0x7b2f25],[74,-60,1.7,0x3d5570],[-70,-38,1.5,0x9a8f6a],[-74,64,1.4,0x486050],[44,73.5,.15,0x777777],[-44,-73.5,-.2,0x7b2f25],[104,1.5,.2,0x486050],[-102,-1.4,-.15,0x7b2f25],[1.8,94,1.65,0x3d5570],[-1.8,-102,1.5,0x9a8f6a]])car(x,z,a,c);
 S(5,1.3,8,.12,2.6,.12,0x777777);S(5,2.5,8,1.8,.7,.08,0xe8e8e0);S(5,2.5,8.05,1.5,.12,.02,0x222222);S(5,2.5,8.05,1.5,.1,.02,0xb02020,.0);
-for(let z=-60;z<=60;z+=20){S(-5,3,z,.2,6,.2,0x4a3b30);S(-5,5.8,z,1.6,.1,.1,0x4a3b30);S(-5,5.85,z+10,.03,.03,20,0x111111)}
-let n=0;while(n<90){const x=R(-SIZE,SIZE),z=R(-SIZE,SIZE);if(Math.abs(x)<6||Math.abs(z)<6||blocked(x,z,2))continue;birch(x,z);n++}
-for(let i=-SIZE;i<=SIZE;i+=4){for(const s of[-1,1]){S(i,1.2,s*(SIZE+1),3.6,R(1.6,2.8),.4,0x55504a);S(s*(SIZE+1),1.2,i,.4,R(1.6,2.8),3.6,0x55504a)}}
-for(const[x,z]of[[3,6],[-9,17],[11,-9]])loot('crate',x,z)
-let k=0;while(k<46){const x=R(-SIZE,SIZE),z=R(-SIZE,SIZE);if(Math.abs(x)<8||Math.abs(z)<8||blocked(x,z,2.2))continue;spruce(x,z,R(.8,1.35));solid(x,z,.6,.6);k++}
-for(let i=-SIZE-6;i<=SIZE+6;i+=4.5)for(const s of[-1,1]){spruce(i+R(-1,1),s*(SIZE+R(3.5,9)),R(1.1,1.9));spruce(s*(SIZE+R(3.5,9)),i+R(-1,1),R(1.1,1.9))}
-for(let i=-SIZE;i<=SIZE;i+=3.4)for(const s of[-1,1]){if(Math.abs(i)>5){drift(s*R(4.1,4.8),i,R(1.2,2.4),R(.25,.65),R(1.6,3.4));drift(i,s*R(3.6,4.3),R(1.6,3.4),R(.25,.6),R(1,2))}}
-for(let i=0;i<150;i++){const x=R(-SIZE,SIZE),z=R(-SIZE,SIZE);if(Math.abs(x)<5||Math.abs(z)<5)continue;if(i%3)drift(x,z,R(1,3.5),R(.15,.5),R(1,2.5));else for(let j=0;j<5;j++)S(x+R(-.4,.4),.2,z+R(-.4,.4),.05,R(.25,.55),.05,0x7a6a48,0,0,4,0)}bake()}
-function blocked(x,z,r){if(Math.abs(x)>SIZE-r||Math.abs(z)>SIZE-r)return true;return solids.some(s=>x>s[0]-r&&x<s[2]+r&&z>s[1]-r&&z<s[3]+r)}
+for(const r of ROADS)for(let z=-SIZE+8;z<SIZE-6;z+=20){if(nearRoad(1000,z+0,5))continue;S(r-5,3,z,.2,6,.2,0x4a3b30);S(r-5,5.8,z,1.6,.1,.1,0x4a3b30);S(r-5,5.85,z+10,.03,.03,20,0x111111);solid(r-5,z,.25,.25)}
+let n=0,tries=0;while(n<270&&tries++<4000){const x=R(-SIZE+2,SIZE-2),z=R(-SIZE+2,SIZE-2);if(nearRoad(x,z,6.2)||reserved(x,z,2.6)||blocked(x,z,1.6))continue;birch(x,z);n++}
+for(let i=-SIZE;i<=SIZE;i+=5){for(const s of[-1,1]){S(i,1.2,s*(SIZE+1),4.6,R(1.6,2.8),.4,0x55504a);S(s*(SIZE+1),1.2,i,.4,R(1.6,2.8),4.6,0x55504a)}}
+for(const[x,z]of[[3,6],[-9,17],[11,-9]])loot('crate',x,z);
+let k=0;tries=0;while(k<150&&tries++<3000){const x=R(-SIZE+2,SIZE-2),z=R(-SIZE+2,SIZE-2);if(nearRoad(x,z,8)||reserved(x,z,3)||blocked(x,z,2))continue;spruce(x,z,R(.8,1.35));solid(x,z,.6,.6);k++}
+for(let i=-SIZE-6;i<=SIZE+6;i+=6)for(const s of[-1,1]){spruce(i+R(-1,1),s*(SIZE+R(3.5,9)),R(1.1,1.9));spruce(s*(SIZE+R(3.5,9)),i+R(-1,1),R(1.1,1.9))}
+const bank=(x,z,w,h,d)=>{if(!reserved(x,z,Math.max(w,d)/2+.2))S(x,0,z,w,h,d,0xcfd6da,0,0,DRIFT)};
+for(const r of ROADS)for(let i=-SIZE;i<=SIZE;i+=4.4)for(const s of[-1,1]){if(nearRoad(1000,i,5))continue;bank(r+s*R(4.1,4.8),i,R(1.2,2.4),R(.25,.65),R(2,3.8));bank(i,r+s*R(3.6,4.3),R(2,3.8),R(.25,.6),R(1,2))}
+for(let i=0;i<380;i++){const x=R(-SIZE,SIZE),z=R(-SIZE,SIZE);if(nearRoad(x,z,5)||reserved(x,z,2))continue;if(i%3)bank(x,z,R(1,3.5),R(.15,.5),R(1,2.5));else for(let j=0;j<5;j++)S(x+R(-.4,.4),.2,z+R(-.4,.4),.05,R(.25,.55),.05,0x7a6a48,0,0,4,0)}bake()}
+/* препятствия: сетка для быстрого поиска. [x0,z0,x1,z1,высота для обзора, окно от, окно до] */
+let sgrid=new Map(),spots=[];
+const CELL=6,ck_=(i,j)=>(i+200)*1000+j+200;
+function solid(x,z,w,d,top=0,hy0=0,hy1=0){const s=[x-w/2,z-d/2,x+w/2,z+d/2,top,hy0,hy1];solids.push(s);for(let i=Math.floor(s[0]/CELL);i<=Math.floor(s[2]/CELL);i++)for(let j=Math.floor(s[1]/CELL);j<=Math.floor(s[3]/CELL);j++){const k=ck_(i,j);let c=sgrid.get(k);if(!c)sgrid.set(k,c=[]);c.push(s)}}
+function anySolid(x0,z0,x1,z1,fn){for(let i=Math.floor(x0/CELL);i<=Math.floor(x1/CELL);i++)for(let j=Math.floor(z0/CELL);j<=Math.floor(z1/CELL);j++){const c=sgrid.get(ck_(i,j));if(c)for(const s of c)if(fn(s))return true}return false}
+function blocked(x,z,r){if(Math.abs(x)>SIZE-r||Math.abs(z)>SIZE-r)return true;return anySolid(x-r,z-r,x+r,z+r,s=>x>s[0]-r&&x<s[2]+r&&z>s[1]-r&&z<s[3]+r)}
+/* прямая видимость между двумя точками; minTop — учитывать только преграды не ниже */
+function los(ax,ay,az,bx,by,bz,minTop=.1){const dx=bx-ax,dy=by-ay,dz=bz-az;return!anySolid(Math.min(ax,bx),Math.min(az,bz),Math.max(ax,bx),Math.max(az,bz),s=>{if(s[4]<minTop)return false;let t0=0,t1=1;
+for(const[o,d,lo,hi]of[[ax,dx,s[0],s[2]],[az,dz,s[1],s[3]]]){if(Math.abs(d)<1e-6){if(o<lo||o>hi)return false}else{let a=(lo-o)/d,b=(hi-o)/d;if(a>b){const q=a;a=b;b=q}if(a>t0)t0=a;if(b<t1)t1=b;if(t0>t1)return false}}
+const y=ay+dy*(t0+t1)/2;return y<s[4]&&y>-.1&&!(s[6]>0&&y>s[5]&&y<s[6])})}
 function move(o,dx,dz,r){if(!blocked(o.x+dx,o.z,r))o.x+=dx;if(!blocked(o.x,o.z+dz,r))o.z+=dz}
+/* куда идти заражённому, если игрока не видно: через ближайшую дверь */
+function route(e){const a=houseOf(e.x,e.z),b=houseOf(P.x,P.z);if(a===b)return null;const h=a||b;let best=null,bd=1e9;
+for(const d of h.doors){const v=Math.hypot(d.out[0]-(a?P.x:e.x),d.out[1]-(a?P.z:e.z));if(v<bd){bd=v;best=d}}if(!best)return null;
+const from=a?best.in:best.out,to=a?best.out:best.in,ax=to[0]-from[0],az=to[1]-from[1],l=Math.hypot(ax,az),side=Math.abs((e.x-from[0])*az-(e.z-from[1])*ax)/l,along=((e.x-from[0])*ax+(e.z-from[1])*az)/l;
+return side<.45&&along>-.5?to:from}
 /* ---------- состояние ---------- */
 let P,inv,en,gibs,drops,blood,decals,fires,flakes,time,day,kills,run=false,paused=true,spawnT,shake=0,flash=0,cd=0,swing=0,msgT=0,gore=true;
 const WN=['Нож','Топор','ПМ','Обрез','Мачете','АК-74','Кулаки'],ORDER=[6,0,4,1,2,3,5],AMMO={2:'a9',3:'shot',5:'a545'},MAGMAX={2:8,3:2,5:30},melee=w=>!AMMO[w];
@@ -355,7 +516,7 @@ crawler:{w:9,m:1,hp:.7,sp:[.9,1.3],wid:.92,lean:0,dmg:.7},
 fat:{w:9,m:1.06,hp:2,sp:[.75,1.05],wid:1.55,lean:.04,dmg:1.35},
 soldier:{w:8,m:1.04,hp:1.3,sp:[1.1,1.5],wid:1.08,lean:.14,dmg:1.15},
 brute:{w:4,m:1.34,hp:2.4,sp:[1.2,1.5],wid:1.24,lean:.26,dmg:1.8,day:2}};
-function spawn(a=26,b=44,force){for(let k=0;k<20;k++){const q=R(0,6.28),d=R(a,b),x=P.x+Math.sin(q)*d,z=P.z+Math.cos(q)*d;if(blocked(x,z,.5))continue;
+function spawn(a=26,b=44,force){for(let k=0;k<20;k++){const q=R(0,6.28),d=R(a,b),x=P.x+Math.sin(q)*d,z=P.z+Math.cos(q)*d;if(blocked(x,z,.5)||houseOf(x,z))continue;
 let type=force;if(!type){const list=Object.entries(TYPES).filter(([,t])=>!t.day||day>=t.day);let n=Math.random()*list.reduce((s,[,t])=>s+t.w,0);type=list.find(([,t])=>(n-=t.w)<0)[0]}
 const T=TYPES[type],m=T.m;const part=(n,s,hp,c)=>({n,s:s.map(v=>v*m),hp:hp*m*m*Math.sqrt(T.hp),c,on:1});
 const pickC=l=>C(l[Math.random()*l.length|0]);
@@ -422,7 +583,7 @@ if(c.pool&&c.pool[3]<c.max){c.pool[3]+=dt*.22;c.pool[5]+=dt*.18}}corpses=corpses
 /* луч против сфер частей тела */
 function ray(dir,ex,ey,ez,range){let best=null,bd=range;for(const e of en){if(Math.hypot(e.x-ex,e.z-ez)>range+2)continue;const J=pose(e);for(const q of e.parts){if(!q.on)continue;for(const[p,rad]of spheres(J,q.n,e.m,e.wid)){
 const lx=p[0]-ex,ly=p[1]-ey,lz=p[2]-ez,t=lx*dir[0]+ly*dir[1]+lz*dir[2];if(t<0||t>bd)continue;const d2=lx*lx+ly*ly+lz*lz-t*t;if(d2<rad*rad){best={e,q,p};bd=t}}}}
-if(best){for(let t=.5;t<bd-.5;t+=.4){const x=ex+dir[0]*t,y=ey+dir[1]*t,z=ez+dir[2]*t;if(y<2.8&&solids.some(s=>x>s[0]&&x<s[2]&&z>s[1]&&z<s[3]&&(s[2]-s[0])>.5))return null}}return best}
+if(best){const t=Math.max(0,bd-.15);if(!los(ex,ey,ez,ex+dir[0]*t,ey+dir[1]*t,ez+dir[2]*t))return null}return best}
 function damage(h,d,cut,gun){const{e,q,p}=h;e.stun=gun?.18:.28;e.flinch=Math.min(1,e.flinch+(gun?.65:.85));if(e.att<.4)e.att=0;e.alert=1;bleed(...p,gun?9:14,gun?1.8:2.5);splat(p[0]+R(-.5,.5),p[2]+R(-.5,.5),R(.2,.6));SFX.flesh(gun?2:act?act.w:0,spatial(e.x,e.z));
 if(q.n==='head'&&e.helmet){e.helmet--;tn({v:.3,t:.2,f:1350,f2:900,type:'triangle',rev:.3});if(!e.helmet){gib(p,[.34,.14,.34],C(0x39432a),2.5);say('Каска сбита!')}else say('Пуля в каску!');if(gun){e.hp-=d*.35;if(e.hp<=0)die(e,true);return}d*=.4}
 if(gun){/* пули оставляют раны, но не отрывают части */
@@ -437,25 +598,27 @@ const WNAME=i=>WN[i];
 const itemName=d=>d.t==='wpn'?WNAME(d.w):NAMES[d.t]+(d.n>1?' ×'+d.n:'');
 const STACK={a9:8,shot:4,a545:20,wood:2,metal:2,cloth:1};
 function addItem(t,x,z,o={}){const d=Object.assign({t,x,z,y:0,vy:0,vx:0,vz:0,yaw:R(0,6.28),n:STACK[t]||1},o);drops.push(d);return d}
-const floorAt=(x,z)=>houses.some(h=>x>h[0]&&x<h[2]&&z>h[1]&&z<h[3])?.065:.03;
+const floorAt=(x,z)=>houseOf(x,z)?.065:.03;
 const COMMON=['wood','wood','wood','wood','metal','metal','metal','cloth','cloth','can','bread','dirty','bandage','a9'];
 const rnd=l=>l[Math.random()*l.length|0];
 function freeSpot(minD,maxR=SIZE-4){for(let k=0;k<40;k++){const x=R(-maxR,maxR),z=R(-maxR,maxR);if(!blocked(x,z,.7)&&Math.hypot(x-P.x,z-P.z)>=minD)return[x,z]}return null}
 function spawnItems(){drops=[];
 const W_=(w,x,z,mag)=>addItem('wpn',x,z,{w,mag:mag||0});
-/* оружие: что-то простое поблизости, серьёзное — дальше */
-W_(0,-1.9,1.6);W_(1,-12.4,19.2);W_(4,4.6,-16.2);W_(2,14.6,-14.6,5);W_(2,-24,-18.6,3);W_(3,-26.4,12.4,2);W_(5,34,-39.5,24);W_(3,28,35,1);
-addItem('a9',13.2,-13.2);addItem('shot',-25,13.8);addItem('a545',35.4,-39.6);addItem('a545',-47,-29);
-/* в избах: еда, вода, бинты */
-for(const h of houses){const cx=(h[0]+h[2])/2,cz=(h[1]+h[3])/2;for(const[t,dx,dz]of[[rnd(['can','bread']),-.4,-1.5],[rnd(['clean','dirty']),.5,-.9],[rnd(['bandage','cloth','can']),-1.2,.9],[rnd(['cloth','wood','a9','shot','bread']),1.4,.7]])addItem(t,cx+dx+R(-.25,.25),cz+dz+R(-.2,.2))}
+/* оружие лежит в зданиях: простое поблизости, серьёзное дальше */
+W_(0,-1.9,1.6);
+const inH=(type,nth,w,mag,extra)=>{const list=houses.filter(h=>h.type===type).sort((p,q)=>Math.hypot(p[0]+p[2],p[1]+p[3])-Math.hypot(q[0]+q[2],q[1]+q[3]));const h=list[Math.min(nth,list.length-1)];const own=spots.filter(p=>inRect(h,p.x,p.z));const p=own[(nth+w)%own.length];p.used=1;W_(w,p.x,p.z,mag);if(extra){const q=own[(nth+w+1)%own.length];addItem(extra,q.x+.3,q.z+.2)}};
+inH('barn',0,1,0);inH('garage',0,4,0);inH('police',0,2,5,'a9');inH('panelka',0,2,3,'a9');inH('izba',9,3,2,'shot');inH('barn',2,3,1,'shot');inH('police',1,5,24,'a545');inH('warehouse',2,5,10,'a545');inH('police',0,3,2,'shot');
+/* в зданиях */
+for(const p of spots)if(!p.used&&Math.random()<.78)addItem(rnd(p.list),p.x,p.z);
 /* около старта и по дорогам */
 for(const[t,x,z]of[['bread',2.2,1],['dirty',-2.4,6.5],['wood',2.6,9],['wood',-3.1,-2],['cloth',1.6,-5],['metal',3.2,-10],['can',-2.8,13]])addItem(t,x,z);
-for(let i=0;i<95;i++){const p=freeSpot(8);if(p)addItem(rnd(COMMON),p[0],p[1])}
-for(let i=0;i<16;i++){const p=freeSpot(8,34);if(p)addItem(rnd(['wood','can','clean','metal','cloth','bandage']),p[0],p[1])}}
+const outside=(m,r)=>{for(let k=0;k<20;k++){const p=freeSpot(m,r);if(p&&!houseOf(p[0],p[1]))return p}return null};
+for(let i=0;i<230;i++){const p=outside(8);if(p)addItem(rnd(COMMON),p[0],p[1])}
+for(let i=0;i<16;i++){const p=outside(8,34);if(p)addItem(rnd(['wood','can','clean','metal','cloth','bandage']),p[0],p[1])}}
 function updateItems(dt){for(const d of drops)if(d.air){d.vy-=9*dt;const nx=d.x+d.vx*dt,nz=d.z+d.vz*dt;if(!blocked(nx,nz,.1)){d.x=nx;d.z=nz}d.y+=d.vy*dt;d.yaw+=dt*5;if(d.y<=0){d.y=0;d.air=false;SFX.thud({vol:.18,pan:0})}}}
 /* что берём: ближайшее к прицелу */
 function focusItem(){const f=look(),ey=1.65+P.y;let best=null,bs=-9;for(const d of drops){const dx=d.x-P.x,dz=d.z-P.z,hd=Math.hypot(dx,dz);if(hd>3.1)continue;const dy=.15-ey,l=Math.hypot(dx,dy,dz),dot=(dx*f[0]+dy*f[1]+dz*f[2])/l,flat=(-Math.sin(P.yaw)*dx-Math.cos(P.yaw)*dz)/(hd||1);
-if(!(dot>.86||(hd<1.9&&flat>.55)))continue;const sc=dot-hd*.06;if(sc>bs){bs=sc;best=d}}return best}
+if(!(dot>.86||(hd<1.9&&flat>.55)))continue;if(!los(P.x,ey,P.z,d.x,.5,d.z,2))continue;const sc=dot-hd*.06;if(sc>bs){bs=sc;best=d}}return best}
 /* модели предметов на земле */
 function drawItem(d,t,hl){const y=floorAt(d.x,d.z)+d.y,c=Math.cos(d.yaw),s=Math.sin(d.yaw),at=(x,h,z)=>[d.x+x*c+z*s,y+h,d.z-x*s+z*c];
 const b=(x,h,z,sx,sy,sz,col,mt=0,me=0,pit=0,yw=0,gl_=0)=>{const p=at(x,h,z);box(p[0],p[1],p[2],sx,sy,sz,C(col),d.yaw+yw,pit,gl_,me,mt)};
@@ -521,7 +684,7 @@ function take(d){const i=drops.indexOf(d);if(i<0)return;drops.splice(i,1);SFX.pi
 if(d.t==='wpn'){if(P.own[d.w]){const k=AMMO[d.w];if(k){const n=Math.max(d.mag,d.w===3?2:d.w===5?10:4);inv[k]+=n;say(`${WN[d.w]} уже есть. Забраны патроны: +${n}`)}else{inv.metal+=2;say(`${WN[d.w]} уже есть. Разобран на металл: +2`)}}else{P.own[d.w]=1;P.mag[d.w]=d.mag;pick(d.w);say('Подобрано: '+WN[d.w])}slots()}
 else{inv[d.t]+=d.n;say(`${NAMES[d.t]} +${d.n}`)}}
 function target(){const d=focusItem();if(d)return{label:'Взять: '+itemName(d),item:d,go(){take(d)}};
-const n=nodes.find(n=>(n.t==='crate'||n.t==='metal')&&!n.taken&&front(n,2.4));if(n)return{label:n.t==='crate'?'Открыть ящик':'Разобрать хлам',go(){n.taken=240;if(n.t==='crate')SFX.creak();else{SFX.chop();SFX.pick('metal')}pickAnim={t:0};
+const n=nodes.find(n=>(n.t==='crate'||n.t==='metal')&&!n.taken&&front(n,2.4)&&los(P.x,1.65+P.y,P.z,n.x,.7,n.z,2));if(n)return{label:n.t==='crate'?'Открыть ящик':'Разобрать хлам',go(){n.taken=240;if(n.t==='crate')SFX.creak();else{SFX.chop();SFX.pick('metal')}pickAnim={t:0};
 const loot=[];if(n.t==='metal'){loot.push('metal','metal');if(Math.random()<.35)loot.push(rnd(['a9','metal','a545']))}else for(let i=0,c=2+(Math.random()*2|0);i<c;i++)loot.push(rnd(['can','bread','dirty','clean','cloth','bandage','wood','metal','a9','shot','a545']));
 const back=Math.atan2(P.x-n.x,P.z-n.z);loot.forEach((t,i)=>{const a=back+(i-(loot.length-1)/2)*.75;addItem(t,n.x,n.z,{y:.8,air:true,vy:2.2+R(0,.6),vx:Math.sin(a)*1.1,vz:Math.cos(a)*1.1})});say(n.t==='crate'?'Ящик открыт: забирай вещи':'Из хлама выпал металл')}};
 return{label:'',snow:1,go(){if(cd>0)return;inv.dirty++;cd=1.2;pickAnim={t:0};SFX.step('snow',true);SFX.pick('dirty');say('Набрано снега: грязная вода +1')}}}
@@ -612,7 +775,7 @@ let f=(keys.KeyW?1:0)-(keys.KeyS?1:0)-joy[1],s=(keys.KeyD?1:0)-(keys.KeyA?1:0)+j
 const sprint=(keys.ShiftLeft||sprintOn)&&l>.3&&f>-.2&&P.st>2&&!useAct&&reloadT<=0,v=(sprint?6.2:3.4)*(useAct?.5:1)*dt;P.st=Math.max(0,Math.min(100,P.st+(sprint?-15:13)*dt));
 const aim=sprint&&!act&&runBlock<=0&&!firing?1:0;runK+=(aim-runK)*Math.min(1,dt*7);
 const sn=Math.sin(P.yaw),cs=Math.cos(P.yaw),ox=P.x,oz=P.z;move(P,(-sn*f+cs*s)*v,(-cs*f-sn*s)*v,.35);const went=Math.hypot(P.x-ox,P.z-oz);moveK+=((went>dt*.5?1:0)-moveK)*Math.min(1,dt*8);
-const inside=houses.some(h=>P.x>h[0]&&P.x<h[2]&&P.z>h[1]&&P.z<h[3]),surf=inside?'wood':Math.abs(P.x)<3.5||Math.abs(P.z)<3?'road':'snow';
+const inside=!!houseOf(P.x,P.z),surf=inside?'wood':isRoad(P.x,P.z)?'road':'snow';
 const prev=Math.floor(P.bob/3.14159);P.bob+=went*(sprint?1.75:2.15);if(!P.y&&Math.floor(P.bob/3.14159)!==prev)SFX.step(surf,sprint);
 P.vy-=13*dt;const air=P.y>0;P.y+=P.vy*dt;if(P.y<=0){if(air){SFX.land(surf);landK=1}P.y=0;P.vy=0}landK=Math.max(0,landK-dt*4);
 breathT-=dt;if(breathT<=0){const tired=P.st<35;if(sprint||tired){SFX.breath(tired?1:.6);breathT=tired?.75:.95}else breathT=.3}
@@ -625,22 +788,22 @@ const bad=(P.food<=0)+(P.water<=0)*1.5+(P.warm<=0)*1.5;if(bad)P.hp-=bad*dt*1.4;e
 for(const n of nodes){if(n.taken>0)n.taken=Math.max(0,n.taken-dt);const to=n.taken>0?1:0;n.lid=(n.lid||0)+(to-(n.lid||0))*Math.min(1,dt*5);if(n.t==='tree'&&n.hp<3)n.hp+=dt*.015}
 for(const q of fires)q.t-=dt;fires=fires.filter(q=>q.t>0);
 /* новые вещи со временем появляются вдали */
-lootT-=dt;if(lootT<=0){lootT=18;if(drops.length<150){const p=freeSpot(24);if(p)addItem(rnd(COMMON.concat(['can','dirty','clean','bread'])),p[0],p[1])}}
+lootT-=dt;if(lootT<=0){lootT=18;if(drops.length<520){const p=freeSpot(24);if(p&&!houseOf(p[0],p[1]))addItem(rnd(COMMON.concat(['can','dirty','clean','bread'])),p[0],p[1])}}
 /* заражённых мало, ночью их не больше, чем днём */
 spawnT-=dt;if(spawnT<=0){spawnT=17;for(let i=en.length-1;i>=0;i--)if(Math.hypot(en[i].x-P.x,en[i].z-P.z)>75)en.splice(i,1);if(en.length<Math.min(7,3+Math.floor(day/2)))spawn(30,48)}
 for(const e of[...en]){const dx=P.x-e.x,dz=P.z-e.z,d=Math.hypot(dx,dz),n=legs(e);e.t+=dt;e.stun-=dt;e.atk-=dt;e.flinch=Math.max(0,e.flinch-dt*3.2);
 if(e.bleed>0){const q=pose(e).chest;if(Math.random()<dt*25)bleed(q[0],q[1],q[2],2,1.2);if(Math.random()<dt*3)splat(e.x+R(-.3,.3),e.z+R(-.3,.3),R(.2,.5));e.hp-=e.bleed*dt*.8;if(e.hp<=0){die(e,true);continue}}
 const chase=e.alert||d<17;if(chase&&d<15)e.alert=1;if(d>34)e.alert=0;
-let want=null;if(chase)want=Math.atan2(dx,dz);else{if(Math.random()<dt*.25)e.wander=Math.random()<.4?null:R(0,6.28);if(e.wander!=null)want=e.wander}
+let want=null;const seen=chase&&d<30&&los(e.x,1.1,e.z,P.x,1.25+P.y,P.z,.9);if(chase){const to=seen?null:route(e);want=to?Math.atan2(to[0]-e.x,to[1]-e.z):Math.atan2(dx,dz)}else{if(Math.random()<dt*.25)e.wander=Math.random()<.4?null:R(0,6.28);if(e.wander!=null)want=e.wander}
 if(want!==null&&!(e.att>.42)){let a=want-e.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));e.yaw+=Math.max(-dt*4,Math.min(dt*4,a))}
 let gone=0;const reach=1.25*Math.max(1,e.m)+(isLow(e)?.15:0);
-if(e.stun<=0&&e.att<=0&&d>reach&&(chase||e.wander!=null)){const low=isLow(e),sp=e.sp*(e.limp?.62:1)*(e.type==='crawler'?(n===2?1:.6):n===2?1:n===1?.5:.4)*(chase?1:.35)*dt,bx=e.x,bz=e.z;move(e,Math.sin(e.yaw)*sp,Math.cos(e.yaw)*sp,.3);
+if(e.stun<=0&&e.att<=0&&(d>reach||(chase&&!seen))&&(chase||e.wander!=null)){const low=isLow(e),sp=e.sp*(e.limp?.62:1)*(e.type==='crawler'?(n===2?1:.6):n===2?1:n===1?.5:.4)*(chase?1:.35)*dt,bx=e.x,bz=e.z;move(e,Math.sin(e.yaw)*sp,Math.cos(e.yaw)*sp,.3);
 if(chase&&Math.hypot(e.x-bx,e.z-bz)<sp*.5)move(e,Math.cos(e.yaw)*sp,-Math.sin(e.yaw)*sp,.3);gone=Math.hypot(e.x-bx,e.z-bz);
 const stride=(low?.55:e.type==='runner'?.95:e.type==='fat'?.5:.6)*e.m,pf=Math.floor(e.ph/3.14159);e.ph+=gone/stride*3.14159;if(Math.floor(e.ph/3.14159)!==pf&&d<13){const o=spatial(e.x,e.z,13);if(low)SFX.thud({vol:o.vol*.2,pan:o.pan});else nz({v:o.vol*(e.m>1.2?.35:.16),t:.08,f:e.m>1.2?500:1500,pan:o.pan})}}
 e.moving+=((gone>dt*.2?1:0)-e.moving)*Math.min(1,dt*6);
 /* атака: замах, потом удар */
-if(e.att<=0&&d<reach+.15&&e.atk<=0&&e.stun<=0){e.att=.001;e.hitDone=0;SFX.zombie(e.type,spatial(e.x,e.z),'attack')}
-if(e.att>0){e.att+=dt/(e.type==='runner'?.7:e.type==='brute'||e.type==='fat'?1.25:.95);if(!e.hitDone&&e.att>=.55){e.hitDone=1;if(d<reach+.45&&P.y<.7){const arms=e.parts[2].on+e.parts[3].on;P.hp-=(arms?3.5+arms*2.8:4.5)*e.T.dmg;shake=.35;$('hurt').style.opacity=.9;SFX.hurt();SFX.thud({vol:.6,pan:0});if(useAct&&Math.random()<.3){say('Тебя сбили!');useAct=null}}}if(e.att>=1){e.att=0;e.atk=.5}}
+if(e.att<=0&&seen&&d<reach+.15&&e.atk<=0&&e.stun<=0){e.att=.001;e.hitDone=0;SFX.zombie(e.type,spatial(e.x,e.z),'attack')}
+if(e.att>0){e.att+=dt/(e.type==='runner'?.7:e.type==='brute'||e.type==='fat'?1.25:.95);if(!e.hitDone&&e.att>=.55){e.hitDone=1;if(seen&&d<reach+.45&&P.y<.7){const arms=e.parts[2].on+e.parts[3].on;P.hp-=(arms?3.5+arms*2.8:4.5)*e.T.dmg;shake=.35;$('hurt').style.opacity=.9;SFX.hurt();SFX.thud({vol:.6,pan:0});if(useAct&&Math.random()<.3){say('Тебя сбили!');useAct=null}}}if(e.att>=1){e.att=0;e.atk=.5}}
 e.call-=dt;if(e.call<=0){e.call=chase?R(2.5,6):R(5,13);const o=spatial(e.x,e.z,28);if(o.vol>.01)SFX.zombie(e.type,o)}}
 for(const b of blood){b.t-=dt;b.vy-=12*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;if(b.y<.03){b.t=0;if(Math.random()<.18)splat(b.x,b.z,R(.1,.35))}}blood=blood.filter(b=>b.t>0);
 for(const g of gibs){g.t-=dt;if(g.rest)continue;g.vy-=12*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;g.a+=dt*7;g.b+=dt*9;if(Math.random()<dt*14)bleed(g.x,g.y,g.z,1,.5);
@@ -762,7 +925,7 @@ gl.uniform4f(U.fire,nf?nf.x:0,.7,nf?nf.z:0,nf?.9+Math.sin(t*17)*.09+Math.sin(t*7
 drawWorld(t,ex,ez,sy,cy,G.dist);
 for(const b of blood)box(b.x,b.y,b.z,b.s,b.s*(1+Math.min(1.5,Math.abs(b.vy)*.25)),b.s,[.45,.015,.02],0,0,.12,3,8);
 const wind=Math.sin(t*.3)*.006+.006;
-for(let i=0;i<G.snow;i++){const q=flakes[i];if(!paused){q[1]-=.011+(i%5)*.002;q[0]+=wind+Math.sin(t+i)*.003}if(q[1]<0){q[0]=R(-15,15);q[1]=9;q[2]=R(-15,15)}const x=ex+((q[0]-ex%30+45)%30)-15,z=ez+((q[2]-ez%30+45)%30)-15;const s=.016+(i%4)*.005;box(x,q[1],z,s,s,s,[.85,.89,.95],i,.7,day_*.55+.05,3)}
+const nearH=houses.filter(h=>inRect(h,ex,ez,24));for(let i=0;i<G.snow;i++){const q=flakes[i];if(!paused){q[1]-=.011+(i%5)*.002;q[0]+=wind+Math.sin(t+i)*.003}if(q[1]<0){q[0]=R(-15,15);q[1]=9;q[2]=R(-15,15)}const x=ex+((q[0]-ex%30+45)%30)-15,z=ez+((q[2]-ez%30+45)%30)-15;const s=.016+(i%4)*.005;if(nearH.some(h=>inRect(h,x,z,.2)))continue;box(x,q[1],z,s,s,s,[.85,.89,.95],i,.7,day_*.55+.05,3)}
 /* оружие в руках: в координатах камеры */
 gl.clear(gl.DEPTH_BUFFER_BIT);fovK=.62;gl.uniformMatrix4fv(U.VP,false,new Float32Array(persp(w/h)));gl.uniform3f(U.eye,0,0,0);gl.uniform4f(U.fire,0,99,0,0);gl.uniform1f(U.shOn,0);gl.uniform3f(U.sun,.45,.75,.48);
 {const near_=nf&&nd<5?.7:0;gl.uniform3f(U.sunCol,sunCol[0]*.8+near_,sunCol[1]*.8+near_*.4,sunCol[2]*.8)}
@@ -791,15 +954,15 @@ const MODELS={
 6(k){for(const s of[1,-1]){const i=s>0?0:1,ext=k.punch?k.punch[i]:0,pm=(k.pump||0)*s;const hx=s*(k.spread||.2)*(1-Math.max(0,ext)*.75),hy=Math.max(0,ext)*.09+pm*.06,hz=-Math.max(0,ext)*.27+Math.min(0,ext)*-.2-pm*.09;
 hand(hx,hy,hz,s,[s*.34,-.24,.3]);wb(hx,hy-.004,hz-.02,.075,.095,.06,COL.glove,7,1);for(let f=0;f<4;f++)wb(hx-s*.0,hy+.032-f*.022,hz-.052,.07,.02,.025,COL.skin,7,1)}},
 0(){ /* армейский нож */
-hand(0,0,0,1,[.17,-.2,.34]);rod(0,0,0,.034,.13,COL.dark,13);for(let i=0;i<5;i++)rod(0,0,-.045+i*.022,.039,.006,COL.black,7);rod(0,0,.072,.044,.022,COL.steel);
+grip([0,0,0],[0,0,-1],[1,.12,0],1,[.2,-.24,.34],.019);rod(0,0,0,.034,.13,COL.dark,13);for(let i=0;i<5;i++)rod(0,0,-.045+i*.022,.039,.006,COL.black,7);rod(0,0,.072,.044,.022,COL.steel);
 wb(0,0,-.072,.022,.074,.014,COL.steel,12,1);sm(0,0,-.076,SH.knife,COL.blade,14);sm(0,-.001,-.076,SH.knifeEdge,COL.edge,14);wb(0,.006,-.16,.0095,.006,.13,COL.dark);for(let i=0;i<6;i++)wb(0,.027,-.1-i*.012,.008,.007,.006,COL.dark);
 if(bloody()){wb(0,-.006,-.255,.0105,.018,.08,COL.red,8,1);wb(0,-.015,-.16,.0102,.007,.05,COL.red,8,1)}},
 4(){ /* мачете */
-hand(0,0,0,1,[.17,-.2,.34]);rod(0,0,.006,.036,.15,COL.wood2,13);for(let i=0;i<7;i++)rod(0,0,-.052+i*.02,.04,.01,COL.tape,7);wb(0,-.01,.088,.026,.05,.026,COL.wood2,13,1);
+grip([0,0,.004],[0,0,-1],[1,.12,0],1,[.2,-.24,.34],.021);rod(0,0,.006,.036,.15,COL.wood2,13);for(let i=0;i<7;i++)rod(0,0,-.052+i*.02,.04,.01,COL.tape,7);wb(0,-.01,.088,.026,.05,.026,COL.wood2,13,1);
 wb(0,0,-.078,.018,.056,.012,COL.dark);sm(0,0,-.082,SH.mach,C(0x676d72),14);sm(0,-.001,-.082,SH.machEdge,COL.edge,14);for(const z of[-.012,.036])rod(.019,0,z,.012,.004,COL.brass,10);wb(0,.008,-.27,.0095,.007,.29,COL.dark);
 if(bloody()){wb(0,-.022,-.42,.011,.032,.13,COL.red,8,1);wb(0,-.034,-.29,.0105,.012,.09,COL.red,8,1)}},
 1(){ /* топор: рукоять вдоль оси y */
-hand(0,-.02,0,1,[.2,-.22,.32]);hand(0,.15,0,-1,[-.3,-.16,.3]);
+grip([0,-.045,.002],[0,1,0],[.62,0,.78],1,[.24,-.26,.3],.026);grip([0,.115,0],[0,1,0],[-.78,-.1,.62],-1,[-.3,-.2,.28],.023);
 wb(0,-.085,.004,.044,.09,.05,COL.wood,13,2,.05);wb(0,.07,0,.033,.25,.043,COL.wood,13,2);wb(0,.27,-.002,.034,.18,.046,COL.wood,13,2,-.03);wb(0,-.135,.007,.052,.022,.058,COL.wood2,13,3);
 for(let i=0;i<6;i++)wb(0,-.062+i*.017,0,.046,.011,.054,COL.tape,7,2);for(let i=0;i<3;i++)wb(0,.272+i*.014,-.004,.043,.008,.055,COL.tape,7,2);
 sm(0,.345,0,SH.axe,C(0x4c5156),12);sm(0,.345,0,SH.axeEdge,COL.edge,14);wb(0,.346,.005,.04,.07,.07,COL.dark,12,1);wb(0,.346,.052,.036,.052,.035,C(0x5e6368),12);wb(0,.386,.004,.012,.012,.03,COL.brass,10);
@@ -844,7 +1007,7 @@ if(hasMag)[[ -.056,-.058,.1],[-.103,-.075,.28],[-.146,-.101,.47],[-.183,-.136,.6
 wb(0,-.086,.09,.034,.108,.05,COL.bake,13,1,-.38);wb(0,-.068,.025,.01,.006,.085,COL.dark);wb(0,-.05,-.017,.01,.04,.006,COL.dark,12,0,.2);wb(0,-.047,.032,.007,.032,.009,COL.black,12,1,.35);
 sm(0,-.002,.148,SH.stock,COL.wood,13);wb(0,-.05,.45,.042,.12,.016,COL.dark,12,1,.1)}};
 /* положение каждого оружия на экране: [x,y,z, поворот, наклон, крен] */
-const POSE={6:[0,-.2,-.46,0,.12,0],0:[.17,-.17,-.43,.3,.12,.12],4:[.2,-.2,-.46,.24,.42,.2],1:[.24,-.28,-.5,.22,-.42,.2],2:[.13,-.15,-.45,.1,.03,0],3:[.16,-.18,-.5,.12,.03,-.06],5:[.15,-.17,-.43,.1,.02,-.05]};
+const POSE={6:[0,-.2,-.46,0,.12,0],0:[.15,-.17,-.42,.34,.46,.22],4:[.19,-.2,-.46,.28,.72,.24],1:[.19,-.25,-.5,.22,-.46,.3],2:[.13,-.15,-.45,.1,.03,0],3:[.16,-.18,-.5,.12,.03,-.06],5:[.15,-.17,-.43,.1,.02,-.05]};
 /* поза при беге: добавка */
 const RUN={6:[0,-.02,.02,0,-.1,0],0:[.02,-.06,.03,.5,.45,-.25],4:[.0,-.05,.04,.55,.35,-.3],1:[-.05,.03,0,.65,.25,.5],2:[.0,-.07,.04,.45,-.6,.35],3:[-.07,-.04,.03,.85,-.35,.5],5:[-.08,-.04,.0,.9,-.3,.55]};
 const ease=x=>x*x*(3-2*x),lerp=(a,b,k)=>a+(b-a)*k,cl=x=>Math.max(0,Math.min(1,x));
@@ -906,6 +1069,29 @@ box(0,f[0],f[1]-.02,.05*f[2],.05*f[2],.05*f[2],[1,.95,.7],0,0,1,3);for(let i=0;i
 box(0,f[0],f[1]-.07*f[2],.045*f[2],.15*f[2],.045*f[2],[1,.7,.2],0,-1.5708,1,4)}
 for(const q of shells)wb(.03+q.x*.5,.04+q.y*.5,.02+q.z*.5,q.red?.02:.012,q.red?.05:.032,q.red?.02:.012,q.red?C(0xa81c14):COL.brass,q.red?7:10,2,q.a,q.a*.7);
 TF=null;localTex=1}
+
+/* кисть, плотно обхватывающая рукоять: c — центр хвата, axis — куда смотрит клинок или обух, palm — где тыл ладони; side: 1 правая, -1 левая */
+function grip(c,axis,palm,side,elbow,r){if(NOHAND)return;
+if(TF){const T_=TF.m,v=[side*.34-TF.ox,-.58-TF.oy,-.08-TF.oz];elbow=[T_[0]*v[0]+T_[1]*v[1]+T_[2]*v[2],T_[3]*v[0]+T_[4]*v[1]+T_[5]*v[2],T_[6]*v[0]+T_[7]*v[1]+T_[8]*v[2]]}
+const nrm=v=>{const l=Math.hypot(...v)||1;return v.map(q=>q/l)},A=nrm(axis),dt=palm[0]*A[0]+palm[1]*A[1]+palm[2]*A[2],p=nrm(palm.map((v,i)=>v-A[i]*dt)),q=[A[1]*p[2]-A[2]*p[1],A[2]*p[0]-A[0]*p[2],A[0]*p[1]-A[1]*p[0]].map(v=>v*side);
+/* точка вокруг рукояти: t — вдоль, deg — угол от тыла ладони, rad — расстояние от оси */
+const at=(t,deg,rad)=>{const a=deg*.017453,cs=Math.cos(a)*rad,sn=Math.sin(a)*rad;return c.map((v,i)=>v+A[i]*t+p[i]*cs+q[i]*sn)};
+const g=COL.glove,sk=COL.skin,seg=(a,b,d,col)=>{limb(a,b,d,col,7);wb(b[0],b[1],b[2],d*.96,d*.96,d*.96,col,7,3)},R_=r+.0115;
+for(let i=0;i<4;i++){const t=.031-i*.021,th=.0225-i*.0009-(i===3?.0012:0),end=238-i*6;
+const k0=at(t,18,R_+.006),k1=at(t,88,R_+.002),k2=at(t,162,R_),k3=at(t,end,R_-.002);
+seg(at(t-.004,-34,R_+.007),k0,th*1.12,g);          /* пястная кость: тыл ладони */
+wb(k0[0],k0[1],k0[2],th*1.2,th*1.2,th*1.2,g,7,3);  /* костяшка */
+seg(k0,k1,th*1.04,g);seg(k1,k2,th*.94,sk);seg(k2,k3,th*.86,sk);
+const n=at(t,end-10,R_+th*.36);wb(n[0],n[1],n[2],.008,.008,.008,C(0xc9a08a),7,3)}
+/* ладонь и ребро ладони */
+seg(at(-.03,-30,R_+.004),at(.022,-30,R_+.004),.036,g);seg(at(-.036,-12,R_+.002),at(-.036,42,R_+.001),.03,g);
+/* большой палец: с другой стороны, поверх указательного, к клинку */
+const t0=at(-.022,-62,R_+.012),t1=at(.016,-92,R_+.01),t2=at(.038,-134,R_+.002),t3=at(.052,-168,R_-.001);
+seg(at(-.036,-34,R_+.008),t0,.037,g);seg(t0,t1,.03,g);seg(t1,t2,.025,sk);seg(t2,t3,.021,sk);
+/* запястье, предплечье, рукав */
+const heel=at(-.038,-24,R_+.006),dir=nrm(elbow.map((v,i)=>v-heel[i])),along=l=>heel.map((v,i)=>v+dir[i]*l);
+const len=Math.hypot(...elbow.map((v,i)=>v-heel[i])),w1=along(.04),m1=along(Math.max(.1,len*.34));
+seg(at(-.008,-32,R_+.006),heel,.05,g);limb(heel,w1,.058,g,7);limb(along(.028),along(.05),.064,COL.tape,7);limb(w1,m1,.062,sk,7);limb(along((.04+len*.34)/2),m1,.074,sk,7);limb(m1,elbow,.104,COL.sleeve,7);limb(m1,along(Math.max(.1,len*.34)+.028),.115,COL.cuff,7)}
 /* ---------- HUD ---------- */
 let hudT=0;function hud(){const bar=(n,v,c)=>`${n} ${Math.ceil(Math.max(0,v))}<div class="bar"><i style="width:${Math.max(0,v)}%;background:${c}"></i></div>`;
 $('stats').innerHTML=bar('Здоровье',P.hp,'#c0262b')+bar('Сытость',P.food,'#c98a2e')+bar('Вода',P.water,'#3f8fc4')+bar('Тепло',P.warm,'#d9622b')+bar('Силы',P.st,'#8fa35a');
