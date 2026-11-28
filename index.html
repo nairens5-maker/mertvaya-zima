@@ -584,36 +584,155 @@ const mid=(a,b,k=.5)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,a[2]+(b[2]-a[2])*k]
 function spheres(J,n,m,W){if(n==='head')return[[J.head,.23*m]];if(n==='body')return[[mid(J.pel,J.neck,.7),.27*m*Math.min(1.35,W)],[mid(J.pel,J.neck,.25),.25*m*Math.min(1.35,W)]];
 const i=n.endsWith('R')?1:0;if(n.startsWith('arm'))return[[mid(J.sh[i],J.el[i],.6),.13*m],[J.el[i],.14*m],[mid(J.el[i],J.ha[i],.7),.14*m]];return[[mid(J.hip[i],J.kn[i],.55),.17*m],[J.kn[i],.16*m],[mid(J.kn[i],J.an[i],.65),.16*m]]}
 function wpos(e,q,J){J=J||pose(e);if(q.n==='head')return J.head;if(q.n==='body')return J.chest;const i=q.n.endsWith('R')?1:0;return q.n.startsWith('arm')?J.el[i]:J.kn[i]}
-function bleed(x,y,z,n,sp=3){if(!gore)return;for(let i=0;i<n&&blood.length<500;i++)blood.push({x,y,z,vx:R(-1,1)*sp,vy:R(0,1.4)*sp,vz:R(-1,1)*sp,s:R(.035,.1),t:R(1,2)})}
-function splat(x,z,s){if(!gore)return;s*=.6;decals.push([x,.035+Math.random()*.012,z,s,.008,s*R(.35,.9),C(Math.random()<.5?0x6e0508:0x8c0a0c),R(0,3),0,.0]);if(decals.length>350)decals.shift()}
+function bleed(x,y,z,n,sp=3){if(!gore)return;for(let i=0;i<n&&blood.length<500;i++)blood.push({x,y,z,vx:R(-1,1)*sp,vy:R(0,1.4)*sp,vz:R(-1,1)*sp,s:R(.025,.07),t:R(1,2)})}
+function splat(x,z,s){if(!gore)return;s*=.6;decals.push([x,.035+Math.random()*.012,z,s,.008,s*R(.35,.9),C(Math.random()<.5?0x3a0204:0x4c0506),R(0,3),0,.0]);if(decals.length>350)decals.shift()}
 function gib(p,s,c,sp=4){if(gore&&gibs.length<120)gibs.push({x:p[0],y:p[1],z:p[2],s,c,vx:R(-1,1)*sp,vy:R(2,5),vz:R(-1,1)*sp,a:R(0,6),b:R(0,6),rest:0,t:40})}
-function sever(e,q){if(!q.on||q.n==='body')return;const J=pose(e),i=q.n.endsWith('R')?1:0;
-if(q.n==='head'){gib(J.head,q.s,q.c)}else{const A=q.n.startsWith('arm')?[J.sh,J.el,J.ha]:[J.hip,J.kn,J.an];for(let k=0;k<2;k++){const p=mid(A[k][i],A[k+1][i]);gib(p,[q.s[0]*(k?.75:1),q.s[1]*.48,q.s[2]*(k?.75:1)],k&&q.n.startsWith('arm')?e.skin:q.c)}}
-const p=wpos(e,q,J);q.on=0;gib(p,[.1,.1,.1],C(0xd8cfc0));for(let i=0;i<4;i++)gib(p,[R(.06,.15),R(.05,.1),R(.06,.15)],C(0x7a0b0d),3);
+/* ---------- физика: тела с суставами и отлетающие части ---------- */
+const GRAV=12,RSTEP=1/60,RAD={pel:.17,waist:.15,neck:.12,fr:.14,head:.17,sh:.1,el:.075,ha:.05,hip:.12,kn:.095,an:.085,hc:.17,hu:.05,hr:.05,hf:.05};
+const LIMB=['head','armL','armR','legL','legR'];
+function body(kind,e,pts){const b={kind,e,p:{},list:[],c:[],t:90,age:0,still:0,sleep:false,acc:0,pool:null,spurt:0,thud:false};
+for(const n in pts){const v=pts[n],q={x:v[0],y:v[1],z:v[2],px:v[0],py:v[1],pz:v[2],r:RAD[n.replace(/[01]$/,'')]*e.m};b.p[n]=q;b.list.push(q)}return b}
+const rdist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+/* связи: жёсткая палка, «не ближе» и «не дальше» */
+function stick(b,i,j){const a=b.p[i],c=b.p[j];if(a&&c){const d=rdist(a,c);b.c.push([a,c,d,d])}}
+function apart(b,i,j,min){const a=b.p[i],c=b.p[j];if(a&&c)b.c.push([a,c,Math.min(min,rdist(a,c)),1e9])}
+function loose(b,i,j,lo,hi){const a=b.p[i],c=b.p[j];if(a&&c){const d=rdist(a,c);b.c.push([a,c,d*lo,d*hi])}}
+const rigid=(b,names)=>{for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++)stick(b,names[i],names[j])};
+function limbLinks(b,a,m,c,fold){if(!b.p[a]||!b.p[m]||!b.p[c])return;stick(b,a,m);stick(b,m,c);apart(b,a,c,(rdist(b.p[a],b.p[m])+rdist(b.p[m],b.p[c]))*fold)}
+function bodyLinks(b){const m=b.e.m;for(const i of[0,1]){limbLinks(b,'sh'+i,'el'+i,'ha'+i,.42);limbLinks(b,'hip'+i,'kn'+i,'an'+i,.55);apart(b,'el'+i,'fr',.22*m);apart(b,'ha'+i,'fr',.2*m);apart(b,'kn'+i,'neck',.7*m);apart(b,'kn'+i,'fr',.42*m)}
+apart(b,'kn0','kn1',.18*m);apart(b,'an0','an1',.15*m);apart(b,'el0','el1',.3*m);
+if(b.p.head){stick(b,'head','neck');loose(b,'head','fr',.84,1.12);for(const n of['sh0','sh1'])loose(b,'head',n,.86,1.14);apart(b,'head','waist',.4*m);apart(b,'head','pel',.6*m)}}
+/* точки скелета из позы: only — какие части включить */
+function skeleton(e,J,has,names){const pts={},right=[Math.cos(e.yaw),0,-Math.sin(e.yaw)],axis=vnorm(vsub(J.neck,J.pel)),fwd=vcross(right,axis),waist=mid(J.pel,J.neck,.38);
+const all={pel:J.pel,neck:J.neck,waist,fr:vadd(mid(J.pel,J.neck,.62),fwd,.17*e.m)};
+for(const n of names)if(all[n])pts[n]=all[n];
+if(names.includes('head')&&has.head)pts.head=J.head;
+for(const i of[0,1]){if(names.includes('sh')){pts['sh'+i]=J.sh[i];if(has[i?'armR':'armL']){pts['el'+i]=J.el[i];pts['ha'+i]=J.ha[i]}}
+if(names.includes('hip')){pts['hip'+i]=J.hip[i];if(has[i?'legR':'legL']){pts['kn'+i]=J.kn[i];pts['an'+i]=J.an[i]}}}return pts}
+const partsOn=e=>Object.fromEntries(LIMB.map((n,i)=>[n,!!e.parts[i+1].on]));
+/* не даём точкам родиться внутри стены */
+function unstick(b,anchor){for(const q of b.list){if(!blocked(q.x,q.z,q.r*.5))continue;for(let k=.8;k>=0;k-=.2){const x=anchor[0]+(q.x-anchor[0])*k,z=anchor[2]+(q.z-anchor[2])*k;if(!blocked(x,z,q.r*.5)||k<.1){q.x=q.px=x;q.z=q.pz=z;break}}}}
+function addBody(b){corpses.push(b);let n=0;for(let i=corpses.length-1;i>=0;i--)if(++n>18)corpses.splice(i,1);return b}
+/* скорость точке или всему телу; point — куда пришёлся удар */
+function shove(b,v,point,radius=.9){for(const q of b.list){const k=point?Math.max(0,1-Math.hypot(q.x-point[0],q.y-point[1],q.z-point[2])/radius):1;if(!k)continue;q.px-=v[0]*k*RSTEP;q.py-=v[1]*k*RSTEP;q.pz-=v[2]*k*RSTEP}b.sleep=false;b.still=0;b.age=Math.min(b.age,3)}
+const jitter=(b,s)=>{for(const q of b.list){q.px-=R(-s,s)*RSTEP;q.py-=R(-s,s)*.5*RSTEP;q.pz-=R(-s,s)*RSTEP}};
+function fullBody(e,J){const has=partsOn(e),b=body('full',e,skeleton(e,J,has,['pel','neck','waist','fr','head','sh','hip']));
+rigid(b,['pel','neck','waist','fr','sh0','sh1','hip0','hip1']);bodyLinks(b);unstick(b,J.pel);return b}
+function halfBody(e,J,up){const has=partsOn(e),b=body(up?'upper':'lower',e,skeleton(e,J,has,up?['neck','waist','fr','head','sh']:['pel','waist','fr','hip']));
+if(!up){const f=b.p.fr,d=vsub(J.pel,mid(J.pel,J.neck,.62));f.x+=d[0];f.y+=d[1];f.z+=d[2];f.px=f.x;f.py=f.y;f.pz=f.z}
+rigid(b,up?['neck','waist','fr','sh0','sh1']:['pel','waist','fr','hip0','hip1']);bodyLinks(b);unstick(b,J.chest);return b}
+function limbPiece(e,J,part){const i=part.endsWith('R')?1:0,arm=part.startsWith('arm'),n=arm?['sh','el','ha']:['hip','kn','an'],pts={};for(const k of n)pts[k+i]=J[k][i].slice();
+const b=body(arm?'arm':'leg',e,pts);b.i=i;limbLinks(b,n[0]+i,n[1]+i,n[2]+i,.4);unstick(b,J.chest);return b}
+/* отрубленная голова — жёсткое тело из четырёх точек: катится и сохраняет лицо */
+function headPiece(e,J){const right=[Math.cos(e.yaw),0,-Math.sin(e.yaw)],B=frame(vsub(J.head,J.neck),right),h=J.head,k=.13*e.m,ax=i=>[B[i*3],B[i*3+1],B[i*3+2]];
+const b=body('head',e,{hc:h.slice(),hr:vadd(h,ax(0),k),hu:vadd(h,ax(1),k),hf:vadd(h,ax(2),k)});rigid(b,['hc','hr','hu','hf']);unstick(b,J.chest);return b}
+/* направление удара: из последнего попадания или от игрока */
+function hitDir(e){return e.last?e.last.dir:vnorm([e.x-P.x,0,e.z-P.z])}
+const flat=d=>vnorm([d[0],0,d[2]],[0,0,1]);
+function headChunks(p,m,dir){for(let i=0;i<14&&gore;i++){gib(p,[R(.04,.11)*m,R(.03,.08)*m,R(.04,.11)*m],C(i<5?0xcdc3ab:i<9?0x7a0b0d:0xa8434a),2.2);const g=gibs[gibs.length-1];if(g){g.vx+=dir[0]*R(1,3.5);g.vz+=dir[2]*R(1,3.5)}}}
+function sever(e,q,burst){if(!q.on||q.n==='body')return;const J=pose(e),p=wpos(e,q,J),dir=flat(hitDir(e));
+q.on=0;
+if(gore){if(q.n==='head'){if(burst)headChunks(J.head,e.m,dir);else{const b=addBody(headPiece(e,J)),side=[dir[2],0,-dir[0]],s=R(-1,1);shove(b,[dir[0]*R(.8,1.8)+side[0]*s,R(2.4,3.4),dir[2]*R(.8,1.8)+side[2]*s]);jitter(b,2.2)}}
+else{const b=addBody(limbPiece(e,J,q.n));shove(b,[dir[0]*R(1.2,2.4)+R(-.8,.8),R(1.4,2.8),dir[2]*R(1.2,2.4)+R(-.8,.8)]);jitter(b,1.6)}
+for(let i=0;i<4;i++)gib(p,[R(.04,.09),R(.03,.07),R(.04,.09)],C(i?0x7a0b0d:0xd8cfc0),2)}
 bleed(...p,45,4);splat(p[0],p[2],R(.7,1.4));e.bleed+=3;SFX.sever(spatial(e.x,e.z));
-if(q.n==='head'){e.hp=0;say('Голова с плеч!')}else if(q.n.startsWith('leg'))say(legs(e)?'Нога отрублена!':'Без ног — ползёт!');else say('Рука отлетела!')}
+if(q.n==='head'){e.hp=0;say(burst?'Голову разнесло!':'Голова с плеч!')}else if(q.n.startsWith('leg'))say(legs(e)?'Нога отрублена!':'Без ног — ползёт!');else say(burst?'Руку оторвало!':'Рука отрублена!')}
 function loot_(e){if(Math.random()<.45)return;const t=e.type==='soldier'?rnd(['a9','a545','can','bandage','metal']):rnd(['cloth','cloth','bread','dirty','a9','shot','metal']);addItem(t,e.x+R(-.5,.5),e.z+R(-.5,.5))}
-function die(e,calm){const i=en.indexOf(e);if(i<0)return;en.splice(i,1);kills++;loot_(e);SFX.zombie(e.type,spatial(e.x,e.z),'die');
-if(calm){/* тело падает целиком */
-corpses.push({e,k:0,v:.2,dir:Math.random()<.72?-1:1,t:60,pool:null});if(corpses.length>12)corpses.shift();e.att=0;e.flinch=0;return}
-const J=pose(e);for(const q of e.parts)if(q.on){const p=wpos(e,q,J);gib(p,q.s,q.c,2);bleed(...p,10,3)}
-for(let k=0;k<10;k++)gib([e.x,1,e.z],[R(.07,.2),R(.06,.14),R(.07,.2)],C(k%4?0x720a0c:0xa8434a),3.5);
-for(let k=0;k<7;k++)splat(e.x+R(-1.2,1.2),e.z+R(-1.2,1.2),R(.5,1.6));SFX.sever(spatial(e.x,e.z))}
-function updateCorpses(dt){for(const c of corpses){c.t-=dt;if(c.k<1){c.v+=dt*(c.k<.3?1.6:5.5);c.k=Math.min(1,c.k+c.v*dt);if(c.k===1){SFX.thud(spatial(c.e.x,c.e.z));
-if(gore){const e=c.e,d=(isLow(e)?.3:c.dir*.95)*e.m,x=e.x+Math.sin(e.yaw)*d,z=e.z+Math.cos(e.yaw)*d;c.pool=[x,.047+Math.random()*.004,z,.2,.008,.17,C(0x4a0305),R(0,3)];c.max=R(1.1,1.7)}}}
-if(c.pool&&c.pool[3]<c.max){c.pool[3]+=dt*.22;c.pool[5]+=dt*.18}}corpses=corpses.filter(c=>c.t>0)}
+/* смерть: тело всегда остаётся телом; split — дробь в упор рвёт его пополам */
+function die(e,how){const i=en.indexOf(e);if(i<0)return;en.splice(i,1);kills++;loot_(e);SFX.zombie(e.type,spatial(e.x,e.z),'die');
+const J=pose(e),dir=flat(hitDir(e)),force=e.last?e.last.force:.8,point=e.last?e.last.point:J.chest;
+const walk=e.moving*e.sp*.6,go=[Math.sin(e.yaw)*walk,0,Math.cos(e.yaw)*walk];e.att=0;e.flinch=0;e.moving=0;
+if(how==='split'&&gore){const up=addBody(halfBody(e,J,true)),low=addBody(halfBody(e,J,false)),w=mid(J.pel,J.neck,.38);
+shove(up,[dir[0]*R(3.2,4.2),R(2.2,3),dir[2]*R(3.2,4.2)]);shove(up,[dir[0]*2,.6,dir[2]*2],J.neck,.8);jitter(up,.9);shove(low,[dir[0]*.9,.3,dir[2]*.9]);shove(low,[-dir[0]*.8,0,-dir[2]*.8],J.an[0],.8);jitter(low,.5);up.spurt=1.6;low.spurt=2.4;
+for(let k=0;k<12;k++)gib(w,[R(.05,.14),R(.04,.1),R(.05,.14)],C(k%4===0?0xcdc3ab:k%2?0x720a0c:0xa8434a),2.8);
+bleed(...w,90,4.5);for(let k=0;k<8;k++)splat(w[0]+dir[0]*R(0,2.2)+R(-.7,.7),w[2]+dir[2]*R(0,2.2)+R(-.7,.7),R(.5,1.5));SFX.sever(spatial(e.x,e.z));SFX.flesh(1,spatial(e.x,e.z));say('Разорвало пополам!');return}
+const b=addBody(fullBody(e,J));shove(b,go);shove(b,[dir[0]*force,force*.2,dir[2]*force]);shove(b,[dir[0]*force*1.4,0,dir[2]*force*1.4],point,.7);
+/* подламываются колени */
+const bend=[Math.sin(e.yaw)*.9,0,Math.cos(e.yaw)*.9];for(const n of['kn0','kn1'])if(b.p[n])shove(b,bend,[b.p[n].x,b.p[n].y,b.p[n].z],.25);jitter(b,.25);
+if(!e.parts[1].on&&gore)b.spurt=2.6}
+/* шаг симуляции по методу Верле */
+function stepBody(b){const L=b.list,pre=L.map(q=>[q.x,q.y,q.z]);
+for(const q of L){const vx=(q.x-q.px)*.992,vy=(q.y-q.py)*.992,vz=(q.z-q.pz)*.992;q.px=q.x;q.py=q.y;q.pz=q.z;q.x+=vx;q.y+=vy-GRAV*RSTEP*RSTEP;q.z+=vz}
+for(let it=0;it<8;it++){for(const[a,c,lo,hi]of b.c){const dx=c.x-a.x,dy=c.y-a.y,dz=c.z-a.z,d=Math.hypot(dx,dy,dz)||1e-6,want=d<lo?lo:d>hi?hi:0;if(!want)continue;const k=(d-want)/d*.5;a.x+=dx*k;a.y+=dy*k;a.z+=dz*k;c.x-=dx*k;c.y-=dy*k;c.z-=dz*k}
+for(const q of L)if(q.y<q.r)q.y=q.r}
+let top=0,hit=0;for(let i=0;i<L.length;i++){const q=L[i],o=pre[i],rr=q.r*.6;
+if(blocked(q.x,q.z,rr)&&!blocked(o[0],o[2],rr)){if(!blocked(q.x,o[2],rr)){q.z=o[2];q.pz=q.z+(q.z-q.pz)*.25}else if(!blocked(o[0],q.z,rr)){q.x=o[0];q.px=q.x+(q.x-q.px)*.25}else{q.x=q.px=o[0];q.z=q.pz=o[2]}}
+if(q.y<=q.r+.002){const vy=q.y-q.py,fall=o[1]-q.y;if(fall>hit)hit=fall;const grip=b.kind==='head'?.9:.72;q.px=q.x-(q.x-q.px)*grip;q.pz=q.z-(q.z-q.pz)*grip;q.py=q.y+(fall>.035?-fall*.28:0)}
+/* застрявшую в стене точку тянем обратно к телу */
+if(blocked(q.x,q.z,rr)){const c=b.list[0];if(c!==q){const dx=c.x-q.x,dz=c.z-q.z,l=Math.hypot(dx,dz)||1;q.x+=dx/l*.015;q.z+=dz/l*.015;q.px=q.x;q.pz=q.z}}
+const m=Math.hypot(q.x-o[0],q.y-o[1],q.z-o[2]);if(m>top)top=m}
+if(hit>.04&&!b.thud){b.thud=true;const q=L[0],o=spatial(q.x,q.z,18);if(b.kind==='head'||b.kind==='arm')SFX.thud({vol:o.vol*.45,pan:o.pan});else SFX.thud(o)}
+b.age+=RSTEP;b.still=top<.0035?b.still+RSTEP:0;if(b.still>.7||b.age>9)b.sleep=true}
+const rpt=q=>[q.x,q.y,q.z];
+const kickFrom={x:0,z:0};
+function updateCorpses(dt){const vx=(P.x-kickFrom.x)/Math.max(dt,.001),vz=(P.z-kickFrom.z)/Math.max(dt,.001),sp=Math.hypot(vx,vz);kickFrom.x=P.x;kickFrom.z=P.z;
+for(const b of corpses){b.t-=dt;
+/* игрок задевает тела и части ногами */
+if(sp>.4&&sp<12)for(const q of b.list){const dx=q.x-P.x,dz=q.z-P.z,d=Math.hypot(dx,dz);if(d<.42&&q.y<P.y+.75){const away=1.1/(d||1),k=b.kind==='head'?1.5:1;q.px-=(dx*away+vx*.35)*k*RSTEP;q.pz-=(dz*away+vz*.35)*k*RSTEP;q.py-=(b.kind==='head'?.9:.25)*RSTEP;b.sleep=false;b.still=0;b.age=Math.min(b.age,6)}}
+if(!b.sleep){b.acc=Math.min(.2,b.acc+dt);while(b.acc>=RSTEP&&!b.sleep){b.acc-=RSTEP;stepBody(b)}}
+const core=b.p.waist||b.p.hc||b.list[0];
+if(b.spurt>0&&gore){b.spurt-=dt;const n=b.p.neck,w=b.p.waist,at=b.kind==='full'?n:w,from=b.kind==='full'?w:b.p.neck||b.p.pel;if(at&&from&&Math.random()<dt*40){const d=vnorm(vsub(rpt(at),rpt(from))),pw=(1.2+Math.sin(b.spurt*13))*1.4;for(let k=0;k<3&&blood.length<500;k++)blood.push({x:at.x,y:at.y,z:at.z,vx:d[0]*pw+R(-.3,.3),vy:d[1]*pw+R(.4,1.4),vz:d[2]*pw+R(-.3,.3),s:R(.03,.07),t:R(.6,1.4)})}}
+if(gore&&!b.pool&&b.age>1&&b.kind!=='leg'){b.pool=[core.x,.047+Math.random()*.004,core.z,.15,.008,.13,C(0x2c0103),R(0,3)];b.max=b.kind==='head'?R(.4,.6):b.kind==='arm'?.35:R(1,1.6)}
+if(b.pool&&b.pool[3]<b.max){b.pool[3]+=dt*.2;b.pool[5]+=dt*.165}}
+corpses=corpses.filter(b=>b.t>0)}
+/* пуля или клинок толкают лежащее тело */
+function pushBodies(dir,ex,ey,ez,range,force){let best=null,bq=null,bd=range;for(const b of corpses)for(const q of b.list){const lx=q.x-ex,ly=q.y-ey,lz=q.z-ez,t=lx*dir[0]+ly*dir[1]+lz*dir[2];if(t<0||t>bd)continue;const rr=q.r+.07;if(lx*lx+ly*ly+lz*lz-t*t<rr*rr){best=b;bq=q;bd=t}}
+if(!best||!los(ex,ey,ez,bq.x,bq.y+.05,bq.z))return false;shove(best,[dir[0]*force,force*.45,dir[2]*force],rpt(bq),.55);bleed(bq.x,bq.y,bq.z,4,1.6);return true}
+/* рисуем тело или кусок по его точкам */
+function bodyJoints(b,sink){const e=b.e,m=e.m,P_=b.p,g=n=>P_[n]?[P_[n].x,P_[n].y-sink,P_[n].z]:null,J={dead:true};
+const s0=g('sh0'),s1=g('sh1'),h0=g('hip0'),h1=g('hip1');const side=s0&&s1?vsub(s1,s0):h0&&h1?vsub(h1,h0):[Math.cos(e.yaw),0,-Math.sin(e.yaw)];J.right=vnorm(side,[1,0,0]);
+let pel=g('pel'),neck=g('neck');const waist=g('waist');if(waist){if(!pel&&neck)pel=vadd(waist,vsub(neck,waist),-.613);if(!neck&&pel)neck=vadd(pel,vsub(waist,pel),2.63)}
+J.pel=pel;J.neck=neck;J.head=g('head');const down=pel&&neck?vnorm(vsub(pel,neck)):[0,-1,0];
+J.sh=[s0,s1];J.hip=[h0,h1];J.el=[0,1].map(i=>g('el'+i)||(J.sh[i]&&vadd(J.sh[i],down,.35*m)));J.ha=[0,1].map(i=>g('ha'+i)||J.el[i]);
+J.kn=[0,1].map(i=>g('kn'+i)||(J.hip[i]&&vadd(J.hip[i],down,.42*m)));J.an=[0,1].map(i=>g('an'+i)||J.kn[i]);return J}
+function drawBody(b){const e=b.e,sink=b.t<4?(4-b.t)*.1:0;
+if(b.kind==='head'){const c=rpt(b.p.hc),ax=n=>vsub(rpt(b.p[n]),c),B=frame(ax('hu'),ax('hr'));drawHead(e,[c[0],c[1]-sink,c[2]],B,true,true);return}
+const J=bodyJoints(b,sink);
+if(b.kind==='arm'||b.kind==='leg'){const i=b.i,a=b.kind==='arm';(a?drawArm:drawLeg)(e,J,i,true);const S=zskin(e),top=a?J.sh[i]:J.hip[i],next=a?J.el[i]:J.kn[i],d=vnorm(vsub(top,next));
+ball(vadd(top,d,.07*e.m),(a?.15:.19)*e.m,S.red,8);bone(top,vadd(top,d,.17*e.m),.05*e.m,S.bonec,0);return}
+drawTorso(e,J,b.kind==='upper'?'up':b.kind==='lower'?'low':undefined);
+if(b.kind!=='lower'){for(const i of[0,1])drawArm(e,J,i);if(e.parts[1].on&&!J.head)return;drawNeck(e,J)}
+if(b.kind!=='upper')for(const i of[0,1])drawLeg(e,J,i)}
+function drawBodies(far,range){for(const b of corpses){const q=b.list[0];if(!far(q.x,q.z,Math.min(range,48)))drawBody(b)}}
+/* отброс живых от удара */
+function knock(e,dir,v){const d=flat(dir),k=v/(e.m*e.m*(e.type==='fat'?1.7:1));e.kx=(e.kx||0)+d[0]*k;e.kz=(e.kz||0)+d[2]*k}
+function updateKnock(e,dt){if(!e.kx&&!e.kz)return;move(e,e.kx*dt,e.kz*dt,.3);const f=Math.exp(-dt*9);e.kx*=f;e.kz*=f;if(Math.abs(e.kx)+Math.abs(e.kz)<.05)e.kx=e.kz=0}
+/* обломки отскакивают от стен */
+function moveGib(g,dt){const nx=g.x+g.vx*dt,nz=g.z+g.vz*dt,free=!blocked(g.x,g.z,.04);if(free&&blocked(nx,g.z,.04))g.vx*=-.35;else g.x=nx;if(free&&blocked(g.x,nz,.04))g.vz*=-.35;else g.z=nz;g.y+=g.vy*dt}
 /* луч против сфер частей тела */
 function ray(dir,ex,ey,ez,range){let best=null,bd=range;for(const e of en){if(Math.hypot(e.x-ex,e.z-ez)>range+2)continue;const J=pose(e);for(const q of e.parts){if(!q.on)continue;for(const[p,rad]of spheres(J,q.n,e.m,e.wid)){
 const lx=p[0]-ex,ly=p[1]-ey,lz=p[2]-ez,t=lx*dir[0]+ly*dir[1]+lz*dir[2];if(t<0||t>bd)continue;const d2=lx*lx+ly*ly+lz*lz-t*t;if(d2<rad*rad){best={e,q,p};bd=t}}}}
+/* крупная грудь не должна заслонять голову, если целятся в неё */
+if(best&&best.q.n==='body'){const q=best.e.parts[1];if(q.on){const J=pose(best.e),p=J.head,rad=.2*best.e.m,lx=p[0]-ex,ly=p[1]-ey,lz=p[2]-ez,t=lx*dir[0]+ly*dir[1]+lz*dir[2];if(t>0&&t<bd+.55&&lx*lx+ly*ly+lz*lz-t*t<rad*rad)best={e:best.e,q,p}}}
 if(best){const t=Math.max(0,bd-.15);if(!los(ex,ey,ez,ex+dir[0]*t,ey+dir[1]*t,ez+dir[2]*t))return null}return best}
-function damage(h,d,cut,gun){const{e,q,p}=h;e.stun=gun?.18:.28;e.flinch=Math.min(1,e.flinch+(gun?.65:.85));if(e.att<.4)e.att=0;e.alert=1;bleed(...p,gun?9:14,gun?1.8:2.5);splat(p[0]+R(-.5,.5),p[2]+R(-.5,.5),R(.2,.6));SFX.flesh(gun?2:act?act.w:0,spatial(e.x,e.z));
-if(q.n==='head'&&e.helmet){e.helmet--;tn({v:.3,t:.2,f:1350,f2:900,type:'triangle',rev:.3});if(!e.helmet){gib(p,[.34,.14,.34],C(0x39432a),2.5);say('Каска сбита!')}else say('Пуля в каску!');if(gun){e.hp-=d*.35;if(e.hp<=0)die(e,true);return}d*=.4}
+/* ---------- урон ---------- */
+function damage(h,d,cut,gun){const{e,q,p}=h,w=gun?P.w:act?act.w:P.w;e.stun=gun?.18:.28;e.flinch=Math.min(1,e.flinch+(gun?.65:.85));if(e.att<.4)e.att=0;e.alert=1;bleed(...p,gun?9:14,gun?1.8:2.5);splat(p[0]+R(-.5,.5),p[2]+R(-.5,.5),R(.2,.6));SFX.flesh(gun?2:w,spatial(e.x,e.z));
+const dir=vnorm([p[0]-P.x,0,p[2]-P.z]);e.last={dir,point:p,force:gun?(w===5?1.3:1.1):w===1?2:w===4?1.4:w===6?1.5:.8};knock(e,dir,gun?(w===5?.9:1.2):w===1?3.2:w===4?2.2:w===6?1.8:1.2);
+if(q.n==='head'&&e.helmet){e.helmet--;tn({v:.3,t:.2,f:1350,f2:900,type:'triangle',rev:.3});if(!e.helmet){gib(p,[.34,.14,.34],C(0x39432a),2.5);say('Каска сбита!')}else say('Пуля в каску!');if(gun){e.hp-=d*.35;if(e.hp<=0)die(e);return}d*=.4}
 if(gun){/* пули оставляют раны, но не отрывают части */
-if(gore){(e.holes||(e.holes=[])).push({n:q.n,x:R(-.35,.35),y:R(-.32,.32)});if(e.holes.length>14)e.holes.shift()}
+wound_(e,q);
 if(q.n==='head'){e.hp-=d*3.2;say('В голову!')}else if(q.n==='body')e.hp-=d;else{e.hp-=d*.55;if(q.n.startsWith('leg')){e.limp=1;e.stun=.45;e.bad=q.n.endsWith('R')?1:0}}
-if(e.hp<=0)die(e,true);return}
-if(!cut){e.hp-=d*(q.n==='head'?1.6:1);if(e.hp<=0)die(e,true);return}
-if(q.n==='body')e.hp-=d;else{q.hp-=d*cut;e.hp-=d*.35;if(q.hp<=0)sever(e,q)}if(e.hp<=0)die(e)}
+if(e.hp<=0)die(e);return}
+if(!cut){e.hp-=d*(q.n==='head'?1.6:1);if(e.hp<=0)die(e);return}
+if(q.n==='body')e.hp-=d;else{q.hp-=d*cut;e.hp-=d*.35;/* смертельный удар лезвием по голове или конечности отрубает её */
+if(q.hp<=0||e.hp<=0){q.hp=0;sever(e,q)}}if(e.hp<=0)die(e)}
+function wound_(e,q){if(!gore)return;(e.holes||(e.holes=[])).push({n:q.n,x:R(-.35,.35),y:R(-.32,.32)});if(e.holes.length>14)e.holes.shift()}
+/* дробь: все дробины одного выстрела считаются вместе */
+function blast(e,hits,d){const dist=Math.hypot(e.x-P.x,e.z-P.z),n={body:0,head:0,armL:0,armR:0,legL:0,legR:0},dir=vnorm([e.x-P.x,0,e.z-P.z]),point=[0,0,0];let total=0,helmet=false;
+for(const h of hits){const k=h.q.n;n[k]++;for(let i=0;i<3;i++)point[i]+=h.p[i]/hits.length;let dm=d*(k==='head'?3.2:k==='body'?1:.55);if(k==='head'&&e.helmet){helmet=true;dm*=.35}else wound_(e,h.q);total+=dm}
+if(helmet&&n.head){e.helmet=Math.max(0,e.helmet-(n.head>1?2:1));tn({v:.3,t:.2,f:1350,f2:900,type:'triangle',rev:.3});if(!e.helmet){gib(point,[.34,.14,.34],C(0x39432a),2.5);say('Каска сбита!')}}
+e.stun=.35;e.flinch=1;if(e.att<.4)e.att=0;e.alert=1;e.hp-=total;
+const power=Math.min(1,hits.length/6)*Math.max(.25,1-dist/14);e.last={dir,point,force:1.2+power*3.2};knock(e,dir,power*6.5);
+bleed(...point,10+hits.length*5,2.5+power*2);for(let i=0;i<Math.min(5,hits.length);i++)splat(point[0]+dir[0]*R(.2,1.8)+R(-.5,.5),point[2]+dir[2]*R(.2,1.8)+R(-.5,.5),R(.25,.8));SFX.flesh(2,spatial(e.x,e.z));
+if(n.legL||n.legR){e.limp=1;e.stun=.55;e.bad=n.legR>n.legL?1:0}
+/* вблизи кучная дробь отрывает конечности */
+if(dist<5&&gore)for(const q of e.parts)if(q.on&&(q.n.startsWith('arm')||q.n.startsWith('leg'))&&n[q.n]>=3){sever(e,q,true);e.hp-=18}
+if(!helmet&&dist<6.5&&n.head>=2&&e.parts[1].on&&e.hp<=0&&gore)sever(e,e.parts[1],true);
+if(e.hp<=0){const torso=dist<5.5&&(n.body>=3||(n.body>=2&&hits.length>=6));die(e,torso?'split':undefined)}}
+function fireShot(g,w){const eye=P.eh+P.y,groups=new Map();
+for(let i=0;i<g.n;i++){const dir=look(R(-g.sp,g.sp),R(-g.sp,g.sp)),h=ray(dir,P.x,eye,P.z,g.range);
+if(!h)pushBodies(dir,P.x,eye,P.z,g.range,w===3?1.1:w===5?2.4:2.8);else if(w===3){if(!groups.has(h.e))groups.set(h.e,[]);groups.get(h.e).push(h)}else damage(h,g.d,0,true)}
+for(const[e,hits]of groups)blast(e,hits,g.d)}
 function look(sx=0,sy=0){const y=P.yaw+sx,p=P.pit+sy;return[-Math.sin(y)*Math.cos(p),Math.sin(p),-Math.cos(y)*Math.cos(p)]}
 /* ---------- предметы в мире ---------- */
 const WNAME=i=>WN[i];
@@ -685,10 +804,10 @@ function attack(){if(cd>0||paused||useAct||reloadT>0)return;const w=P.w;
 if(melee(w)){if(act)return;const m=MELEE[w];if(P.st<m.st+1)return;P.st-=m.st;const name=m.list[combo++%m.list.length],a=ANIM[name];comboT=1.6;act={w,name,a,t:0,done:false,sw:false};cd=a.dur*.95}
 else{const g=GUN[w];if(!P.mag[w]){if(inv[AMMO[w]])reload();else{SFX.dry();say('Нет патронов');cd=.4}return}
 P.mag[w]--;cd=g.cd;flash=.055;shake=g.sh;rec=Math.min(1.4,rec+(w===5?.55:1));SFX.shot(w);if(w!==3){shells.push({x:.04,y:.02,z:0,vx:R(.7,1.2),vy:R(.7,1.3),vz:R(-.2,.3),a:R(0,6),t:.55});SFX.casing()}
-const eye=P.eh+P.y;for(let i=0;i<g.n;i++){const h=ray(look(R(-g.sp,g.sp),R(-g.sp,g.sp)),P.x,eye,P.z,g.range);if(h)damage(h,g.d,0,true)}
+const eye=P.eh+P.y;fireShot(g,w);
 P.pit=Math.min(1.4,P.pit+g.kick);runBlock=.6;for(const e of en)if(Math.hypot(e.x-P.x,e.z-P.z)<28)e.alert=1}}
 function strike(){const m=MELEE[act.w],eye=P.eh+P.y;let h=null;for(const o of[0,-.12,.12,-.24,.24]){for(const v of(P.eh<1.3?[0,-.2,.2,-.45,.42,-.68,.62]:[0,-.2,-.45,-.68])){h=ray(look(o,v),P.x,eye,P.z,m.reach);if(h)break}if(h)break}
-if(h){damage(h,m.d,m.cut,false);shake=act.w===1?.22:.1}else chop(act.w)}
+if(h){damage(h,m.d,m.cut,false);shake=act.w===1?.22:.1}else if(!pushBodies(look(),P.x,eye,P.z,m.reach+.2,act.w===1?3.4:act.w===6?1.6:2.4))chop(act.w)}
 function updateActions(dt){comboT-=dt;if(comboT<=0)combo=0;runBlock-=dt;
 if(act){act.t+=dt;const p=act.t/act.a.dur;if(!act.sw&&p>act.a.hit-.14){act.sw=true;SFX.swish(act.w)}if(!act.done&&p>=act.a.hit){act.done=true;strike()}if(p>=1)act=null}
 if(reloadT>0){const was=1-reloadT/reloadDur;reloadT-=dt;const now=1-Math.max(0,reloadT)/reloadDur;for(const[at,fn]of RSOUND[P.w]||[])if(was<at&&now>=at){SFX[fn]();if(P.w===3&&fn==='eject')for(const x of[-.02,.02])shells.push({x:x,y:.0,z:.08,vx:R(-.1,.5),vy:R(.8,1.2),vz:R(.2,.5),a:R(0,6),t:.65,red:1})}
@@ -1013,8 +1132,8 @@ for(const q of fires)q.t-=dt;fires=fires.filter(q=>q.t>0);
 lootT-=dt;if(lootT<=0){lootT=18;if(drops.length<520){const p=freeSpot(24);if(p&&!houseOf(p[0],p[1]))addItem(rnd(COMMON.concat(['can','dirty','clean','bread'])),p[0],p[1])}}
 /* заражённых мало, ночью их не больше, чем днём */
 spawnT-=dt;if(spawnT<=0){spawnT=17;for(let i=en.length-1;i>=0;i--)if(Math.hypot(en[i].x-P.x,en[i].z-P.z)>75)en.splice(i,1);if(en.length<Math.min(7,3+Math.floor(day/2)))spawn(30,48)}
-for(const e of[...en]){const dx=P.x-e.x,dz=P.z-e.z,d=Math.hypot(dx,dz),n=legs(e);e.t+=dt;e.stun-=dt;e.atk-=dt;e.flinch=Math.max(0,e.flinch-dt*3.2);
-if(e.bleed>0){const q=pose(e).chest;if(Math.random()<dt*25)bleed(q[0],q[1],q[2],2,1.2);if(Math.random()<dt*3)splat(e.x+R(-.3,.3),e.z+R(-.3,.3),R(.2,.5));e.hp-=e.bleed*dt*.8;if(e.hp<=0){die(e,true);continue}}
+for(const e of[...en]){const dx=P.x-e.x,dz=P.z-e.z,d=Math.hypot(dx,dz),n=legs(e);e.t+=dt;e.stun-=dt;e.atk-=dt;e.flinch=Math.max(0,e.flinch-dt*3.2);updateKnock(e,dt);
+if(e.bleed>0){const q=pose(e).chest;if(Math.random()<dt*25)bleed(q[0],q[1],q[2],2,1.2);if(Math.random()<dt*3)splat(e.x+R(-.3,.3),e.z+R(-.3,.3),R(.2,.5));e.hp-=e.bleed*dt*.8;if(e.hp<=0){die(e);continue}}
 const sr=STEALTH[P.stance],chase=e.alert||d<17*sr;if(chase&&d<15*sr)e.alert=1;if(d>34)e.alert=0;
 let want=null;const seen=chase&&d<30&&los(e.x,1.1,e.z,P.x,P.eh*.76+P.y,P.z,.9);if(chase){const to=seen?null:route(e);want=to?Math.atan2(to[0]-e.x,to[1]-e.z):Math.atan2(dx,dz)}else{if(Math.random()<dt*.25)e.wander=Math.random()<.4?null:R(0,6.28);if(e.wander!=null)want=e.wander}
 if(want!==null&&!(e.att>.42)){let a=want-e.yaw;a=Math.atan2(Math.sin(a),Math.cos(a));e.yaw+=Math.max(-dt*4,Math.min(dt*4,a))}
@@ -1029,7 +1148,7 @@ if(e.att<=0&&seen&&d<reach+.15&&e.atk<=0&&e.stun<=0){e.att=.001;e.hitDone=0;e.do
 if(e.att>0){e.att+=dt/(e.type==='runner'?.7:e.type==='brute'||e.type==='fat'?1.25:.95);if(!e.hitDone&&e.att>=.55){e.hitDone=1;if(e.door)hitDoor(e.door,e);else if(seen&&d<reach+.45&&P.y<.7){const arms=e.parts[2].on+e.parts[3].on;P.hp-=(arms?3.5+arms*2.8:4.5)*e.T.dmg*(P.gear.vest?.67:1);shake=.35;$('hurt').style.opacity=.9;SFX.hurt();SFX.thud({vol:.6,pan:0});if(useAct&&Math.random()<.3){say('Тебя сбили!');useAct=null}}}if(e.att>=1){e.att=0;e.atk=.5}}
 e.call-=dt;if(e.call<=0){e.call=chase?R(2.5,6):R(5,13);const o=spatial(e.x,e.z,28);if(o.vol>.01)SFX.zombie(e.type,o)}}
 for(const b of blood){b.t-=dt;b.vy-=12*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;if(b.y<.03){b.t=0;if(Math.random()<.18)splat(b.x,b.z,R(.1,.35))}}blood=blood.filter(b=>b.t>0);
-for(const g of gibs){g.t-=dt;if(g.rest)continue;g.vy-=12*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;g.a+=dt*7;g.b+=dt*9;if(Math.random()<dt*14)bleed(g.x,g.y,g.z,1,.5);
+for(const g of gibs){g.t-=dt;if(g.rest)continue;g.vy-=12*dt;moveGib(g,dt);g.a+=dt*7;g.b+=dt*9;if(Math.random()<dt*14)bleed(g.x,g.y,g.z,1,.5);
 const h=Math.min(g.s[0],g.s[2])/2;if(g.y<h){g.y=h;splat(g.x,g.z,R(.2,.6));if(g.vy<-2){if(g.s[0]>.15)SFX.flesh(2,{vol:spatial(g.x,g.z,14).vol*.35,pan:spatial(g.x,g.z,14).pan});g.vy*=-.3;g.vx*=.5;g.vz*=.5}else{g.rest=1;g.b=g.s[1]>.3?1.57:0}}}gibs=gibs.filter(g=>g.t>0);
 if(+$('hurt').style.opacity>0)$('hurt').style.opacity=Math.max(P.hp<25?.4:0,$('hurt').style.opacity-dt*1.6);
 msgT-=dt;if(msgT<=0)$('msg').textContent='';
@@ -1042,44 +1161,59 @@ const BLACK=[0,0,0];
 /* кость: цилиндр между двумя точками */
 function bone(a,b,th,c,mt=7){limb(a,b,th,c,mt)}
 const ball=(p,d,c,mt=7,yaw=0,dy=d,dz=d,pit=0)=>box(p[0],p[1],p[2],d,dy,dz,c,yaw,pit,0,3,mt);
-function drawZombie(e,ck){const J=pose(e,ck),m=e.m,W=e.wid,ty=e.type,P_=e.parts,yaw=e.yaw,cy_=Math.cos(yaw),sy_=Math.sin(yaw),skin=e.skin,coat=e.coat,pants=e.pants,red=C(gore?0x6e0507:0x333333),bonec=C(0xcdc3ab);
+/* векторы и локальные системы координат: [вправо, вверх, вперёд] */
+const vsub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],vadd=(a,b,k=1)=>[a[0]+b[0]*k,a[1]+b[1]*k,a[2]+b[2]*k],vdot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const vnorm=(a,d=[0,1,0])=>{const l=Math.hypot(a[0],a[1],a[2]);return l>1e-5?[a[0]/l,a[1]/l,a[2]/l]:d.slice()};
+const vcross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+function frame(up,right){const u=vnorm(up);let r=vadd(right,u,-vdot(right,u));r=vnorm(r,Math.abs(u[0])<.9?vnorm(vadd([1,0,0],u,-u[0])):[0,0,1]);return[...r,...u,...vcross(r,u)]}
+function framed(o,m,fn){const was=TF;TF={m,px:0,py:0,pz:0,ox:o[0],oy:o[1],oz:o[2]};fn();TF=was}
+const yawPitch=(yaw,pit)=>{const a=Math.cos(yaw),b=Math.sin(yaw),e=Math.cos(pit),f=Math.sin(pit);return[a,0,-b,b*f,e,a*f,b*e,-f,a*e]};
+/* оформление заражённого по частям: так их рисуют и живыми, и мёртвыми, и по кускам */
+function zskin(e){const m=e.m,yaw=e.yaw,cy_=Math.cos(yaw),sy_=Math.sin(yaw);return{m,W:e.wid,ty:e.type,yaw,cy_,sy_,skin:e.skin,coat:e.coat,pants:e.pants,red:C(gore?0x6e0507:0x333333),bonec:C(0xcdc3ab),shirtless:e.type==='brute'||e.type==='fat',
 /* точка со смещением в системе заражённого */
-const off=(p,x,y,z)=>[p[0]+x*cy_+z*sy_,p[1]+y,p[2]-x*sy_+z*cy_];
-const shirtless=ty==='brute'||ty==='fat';
-/* туловище: ориентировано по линии таз-шея */
-const dx=J.neck[0]-J.pel[0],dy=J.neck[1]-J.pel[1],dz=J.neck[2]-J.pel[2],fw=dx*sy_+dz*cy_,tp=Math.atan2(fw,dy),tlen=Math.hypot(fw,dy);
-const tor=(k,w,h,d,c,mt=7,me=1,fwd=0)=>{const p=mid(J.pel,J.neck,k);const q=off(p,0,-Math.sin(tp)*fwd,Math.cos(tp)*fwd);box(q[0],q[1],q[2],w,h,d,c,yaw,tp,0,me,mt)};
-tor(.7,.6*W*m,tlen*.64,.31*Math.min(W,1.35)*m,coat);tor(.3,.46*W*m,tlen*.56,.28*Math.min(W,1.4)*m,coat);tor(.02,.46*W*m,.2*m,.29*Math.min(W,1.35)*m,pants);
+off:(p,x,y,z)=>[p[0]+x*cy_+z*sy_,p[1]+y,p[2]-x*sy_+z*cy_]}}
+/* разрез: рваная плоть, позвоночник и рёбра; dir=-1 смотрит вниз, 1 вверх */
+function wound(S,y,dir,w){const{m,red,bonec}=S;box(0,y,0,w*.96,.05*m,.25*m,red,0,0,0,1,8);for(let i=0;i<7;i++){const a=i*2.4;box(Math.sin(a)*w*.34,y+dir*(.025+.028*(i%3))*m,Math.cos(a*1.7)*.08*m,(.07+.015*(i%3))*m,(.07+.04*(i%2))*m,.07*m,C(i%3?0x720a0c:0x9c3038),a,.5*Math.sin(a),0,3,8)}
+box(0,y+dir*.09*m,-.07*m,.05*m,.2*m,.05*m,bonec,0,0,0,2,0);for(const s of[-1,1])for(let i=0;i<2;i++)box(s*w*(.3+i*.07),y+dir*(.05+i*.02)*m,.02*m+i*.05*m,.022*m,.12*m,.022*m,bonec,0,.3,0,2,0)}
+/* туловище в своей системе: таз в нуле, вверх к шее. sec: 'up' и 'low' — половины разорванного тела */
+function drawTorso(e,J,sec){const S=zskin(e),{m,W,ty,skin,coat,pants,bonec}=S;
+const axis=vsub(J.neck,J.pel),tlen=Math.hypot(...axis),right=J.right||[S.cy_,0,-S.sy_];
+framed(J.pel,frame(axis,right),()=>{const here=k=>!sec||(sec==='up'?k>=.38:k<.38);
+const tor=(k,w,h,d,c,mt=7,me=1,fwd=0)=>{if(here(k))box(0,k*tlen,fwd,w,h,d,c,0,0,0,me,mt)};
+const at=(x,k,z)=>[x,k*tlen,z];
+tor(.7,.6*W*m,tlen*.64,.31*Math.min(W,1.35)*m,coat);if(sec==='low')tor(.2,.46*W*m,tlen*.37,.28*Math.min(W,1.4)*m,coat);else if(!sec)tor(.3,.46*W*m,tlen*.56,.28*Math.min(W,1.4)*m,coat);tor(.02,.46*W*m,.2*m,.29*Math.min(W,1.35)*m,pants);
 if(ty==='fat'){tor(.28,.62*m*1.1,.46*m,.5*m,coat,7,3,.07*m);tor(.14,.4*m,.2*m,.3*m,skin,7,3,.16*m)}
-if(ty==='brute'){for(const s of[-.14,.14]){const p=mid(J.pel,J.neck,.74),q=off(p,s*m,0,.11*m);ball(q,.3*m,skin,7,yaw,.24*m,.2*m,tp)}tor(.72,.14*m,tlen*.6,.38*m,C(0x1e1b18),7,1)}
-if(ty==='soldier'){tor(.66,.54*m,tlen*.52,.42*m,C(0x2a3020),7,1);for(const s of[-.15,0,.15]){const q=off(mid(J.pel,J.neck,.45),s*m,0,.23*m);box(q[0],q[1],q[2],.12*m,.15*m,.07*m,C(0x333a26),yaw,tp,0,1,7)}tor(.1,.52*m,.07*m,.35*m,C(0x151512))}
-if(ty==='woman'){const p=off(J.pel,0,-.15*m,0);box(p[0],p[1],p[2],.5*m,.42*m,.36*m,coat,yaw,0,0,4,7)}
-if(ty==='ded'){tor(.55,.04*m,tlen*.8,.345*m,C(0x1d1c19),7,0);for(let i=0;i<3;i++){const q=off(mid(J.pel,J.neck,.3+i*.22),.03*m,0,.175*m);ball(q,.035,C(0x8a7a50),10)}}
-if(ty==='runner'){for(const s of[-.19,.19]){const q=off(mid(J.pel,J.neck,.6),s*m,0,.02*m);box(q[0],q[1],q[2],.04*m,tlen*.7,.31*m,C(0xb8b8b0),yaw,tp,0,0,7)}}
-if(ty==='walker'&&gore){tor(.33,.2*m,.17*m,.06*m,C(0x4a0608),8,3,.13*m);for(let i=0;i<3;i++)tor(.27+i*.07,.15*m,.018*m,.03*m,bonec,0,2,.16*m)}
-if(gore&&e.hp<75*m*m*e.T.hp){tor(.62,.2*m,.24*m,.05*m,C(0x5a0709),8,3,.15*Math.min(W,1.3)*m)}
-/* руки */
-for(let i=0;i<2;i++){const q=P_[2+i],sh=J.sh[i],el=J.el[i],ha=J.ha[i];ball(sh,.21*m*Math.sqrt(W),shirtless?skin:coat);
-if(!q.on){ball(sh,.17*m,red,8);bone(sh,mid(sh,el,.3),.05*m,bonec,0);continue}
+if(ty==='brute'&&here(.74)){for(const s of[-.14,.14])ball(at(s*m,.74,.11*m),.3*m,skin,7,0,.24*m,.2*m);tor(.72,.14*m,tlen*.6,.38*m,C(0x1e1b18),7,1)}
+if(ty==='soldier'){tor(.66,.54*m,tlen*.52,.42*m,C(0x2a3020),7,1);if(here(.45))for(const s of[-.15,0,.15])box(s*m,.45*tlen,.23*m,.12*m,.15*m,.07*m,C(0x333a26),0,0,0,1,7);tor(.1,.52*m,.07*m,.35*m,C(0x151512))}
+if(ty==='woman'&&here(0))box(0,-.15*m,0,.5*m,.42*m,.36*m,coat,0,0,0,4,7);
+if(ty==='ded'&&here(.5)){tor(.55,.04*m,tlen*(sec?.6:.8),.345*m,C(0x1d1c19),7,0);for(let i=0;i<3;i++)ball(at(.03*m,.3+i*.22+(sec?.1:0),.175*m),.035,C(0x8a7a50),10)}
+if(ty==='runner'&&here(.6))for(const s of[-.19,.19])box(s*m,.6*tlen,.02*m,.04*m,tlen*(sec?.55:.7),.31*m,C(0xb8b8b0),0,0,0,0,7);
+if(ty==='walker'&&gore&&here(.33)&&!sec){tor(.33,.2*m,.17*m,.06*m,C(0x4a0608),8,3,.13*m);for(let i=0;i<3;i++)tor(.27+i*.07,.15*m,.018*m,.03*m,bonec,0,2,.16*m)}
+if(gore&&(e.hp<75*m*m*e.T.hp)&&here(.62))tor(.62,.2*m,.24*m,.05*m,C(0x5a0709),8,3,.15*Math.min(W,1.3)*m);
+if(sec&&gore)wound(S,.38*tlen,sec==='up'?-1:1,.46*Math.min(W,1.4)*m);
+if(e.holes&&gore)for(const o of e.holes)if(o.n==='body'&&here(.55+o.y*.7)){const z=.165*Math.min(1.35,W)*m,x=o.x*.45*W*m,y=(.55+o.y*.7)*tlen;box(x,y,z,.065,.065,.03,C(0x4c0305),0,0,0,3,8);box(x,y,z+.014,.026,.026,.014,[.03,0,0],0,0,0,3)}})}
+function drawArm(e,J,i,on=e.parts[2+i].on){const{m,W,ty,skin,coat,red,bonec,shirtless,off}=zskin(e),sh=J.sh[i],el=J.el[i],ha=J.ha[i];ball(sh,.21*m*Math.sqrt(W),shirtless?skin:coat);
+if(!on){ball(sh,.17*m,red,8);bone(sh,mid(sh,el,.3),.05*m,bonec,0);return}
 const th=.155*m*(ty==='brute'?1.4:ty==='fat'?1.3:W);bone(sh,el,th,shirtless?skin:coat);ball(el,th*.86,shirtless||ty==='walker'&&i?skin:coat);bone(el,ha,th*.74,shirtless||(ty==='walker'&&i)||ty==='woman'?skin:coat);bone(mid(el,ha,.8),mid(el,ha,.96),th*.66,skin);
-const d=[ha[0]-el[0],ha[1]-el[1],ha[2]-el[2]],l=Math.hypot(...d)||1,u=d.map(v=>v/l),palm=[ha[0]+u[0]*.05*m,ha[1]+u[1]*.05*m,ha[2]+u[2]*.05*m];ball(palm,.105*m,skin,7,yaw,.1*m,.075*m);
-for(let f=-1;f<=1;f++){const a=off(palm,f*.032*m,0,0),k=[a[0]+u[0]*.07*m,a[1]+u[1]*.07*m,a[2]+u[2]*.07*m];bone(a,k,.027*m,skin);bone(k,[k[0]+u[0]*.04*m,k[1]+u[1]*.04*m-.035*m,k[2]+u[2]*.04*m],.021*m,C(0x3a2c20))}}
-/* ноги */
-for(let i=0;i<2;i++){const q=P_[4+i],hip=J.hip[i],kn=J.kn[i],an=J.an[i];ball(hip,.22*m*Math.sqrt(W),pants);
-if(!q.on){ball(hip,.19*m,red,8);bone(hip,mid(hip,kn,.28),.06*m,bonec,0);continue}
+const d=[ha[0]-el[0],ha[1]-el[1],ha[2]-el[2]],l=Math.hypot(...d)||1,u=d.map(v=>v/l),palm=[ha[0]+u[0]*.05*m,ha[1]+u[1]*.05*m,ha[2]+u[2]*.05*m];ball(palm,.105*m,skin,7,e.yaw,.1*m,.075*m);
+for(let f=-1;f<=1;f++){const a=off(palm,f*.032*m,0,0),k=[a[0]+u[0]*.07*m,a[1]+u[1]*.07*m,a[2]+u[2]*.07*m];bone(a,k,.027*m,skin);bone(k,[k[0]+u[0]*.04*m,k[1]+u[1]*.04*m-(J.dead?0:.035*m),k[2]+u[2]*.04*m],.021*m,C(0x3a2c20))}}
+function drawLeg(e,J,i,on=e.parts[4+i].on){const{m,W,ty,skin,pants,red,bonec,off}=zskin(e),hip=J.hip[i],kn=J.kn[i],an=J.an[i];ball(hip,.22*m*Math.sqrt(W),pants);
+if(!on){ball(hip,.19*m,red,8);bone(hip,mid(hip,kn,.28),.06*m,bonec,0);return}
 const th=.205*m*Math.min(1.35,W);const bare=ty==='woman';bone(hip,kn,th,pants);ball(kn,th*.8,bare?skin:pants);bone(kn,an,th*.72,bare?skin:pants);
-const foot=off(an,0,-.025*m,.075*m);box(foot[0],Math.max(.05,foot[1]),foot[2],.17*m,.12*m,.31*m,C(ty==='runner'?0x6a6a66:0x17130f),yaw,isLow(e)?1.2:0,0,1,7);bone(mid(kn,an,.76),an,th*.78,C(0x1b1712))}
-/* шея и голова */
-if(!P_[1].on){ball(J.neck,.16*m,red,8);bone(J.neck,off(J.neck,0,.07*m,0),.05*m,bonec,0);return}
-bone(J.neck,J.head,.12*m,skin);const H=J.head,hp=(isLow(e)?-.25:.12)+(ck!==undefined?-.2*ck:0)-(e.att>.4&&e.att<.75?.2:0),yh=yaw+J.headTilt*.6;
-const hc=Math.cos(yh),hs=Math.sin(yh),ho=(x,y,z)=>{const ce=Math.cos(hp),se=Math.sin(hp),y2=y*ce-z*se,z2=y*se+z*ce;return[H[0]+(x*hc+z2*hs)*m,H[1]+y2*m,H[2]+(-x*hs+z2*hc)*m]};
-const hb=(x,y,z,sx,sy,sz,c,mt=7,me=3,glow=0)=>{const p=ho(x,y,z);box(p[0],p[1],p[2],sx*m,sy*m,sz*m,c,yh,hp,glow,me,mt)};
-const open=.025+(e.att>0&&ck===undefined?Math.sin(Math.min(1,e.att)*3.14)*.06:Math.max(0,Math.sin(e.t*1.7))*.022)+(ck!==undefined?.035:0);
+const shoe=C(ty==='runner'?0x6a6a66:0x17130f);
+if(J.dead)framed(an,frame(vsub(kn,an),J.right||[1,0,0]),()=>box(0,-.025*m,.075*m,.17*m,.12*m,.31*m,shoe,0,0,0,1,7));
+else{const foot=off(an,0,-.025*m,.075*m);box(foot[0],Math.max(.05,foot[1]),foot[2],.17*m,.12*m,.31*m,shoe,e.yaw,isLow(e)?1.2:0,0,1,7)}
+bone(mid(kn,an,.76),an,th*.78,C(0x1b1712))}
+/* голова в своей системе: H — центр, B — оси */
+function drawHead(e,H,B,dead,cutNeck){const{m,ty,skin,coat,red,bonec}=zskin(e);framed(H,B,()=>{
+const hb=(x,y,z,sx,sy,sz,c,mt=7,me=3,glow=0)=>box(x*m,y*m,z*m,sx*m,sy*m,sz*m,c,0,0,glow,me,mt);
+const open=.025+(e.att>0&&!dead?Math.sin(Math.min(1,e.att)*3.14)*.06:Math.max(0,Math.sin(e.t*1.7))*.022)+(dead?.035:0);
 const fatH=ty==='fat'?1.14:ty==='brute'?.94:1;
+if(cutNeck){hb(0,-.17,-.03,.13,.09,.13,skin,7,2);hb(0,-.22,-.03,.135,.025,.135,red,8,2);hb(0,-.235,-.045,.035,.05,.035,bonec,0,2)}
 hb(0,.025,0,.31*fatH,.33,.33,skin);hb(0,-.055,.035,.23*fatH,.2,.25,skin);hb(0,.075,.115,.25,.055,.1,skin);
 hb(0,-.105-open,.07,.18,.075,.17,skin,7,1);hb(0,-.085-open*.5,.152,.13,.025+open,.03,C(0x2a0507),8);
 for(let i=-2;i<=2;i++){hb(i*.023,-.068,.162,.017,.026,.012,C(0xb9ae88),0,0);if(i%2===0)hb(i*.025,-.096-open,.155,.016,.022,.012,C(0x9f9470),0,0)}
-for(const s of[-1,1]){hb(s*.068,.032,.138,.078,.055,.05,C(0x24140f),7);const blind=e.bad===(s>0?1:0)&&ty==='walker';hb(s*.068,.032,.158,.04,.028,.025,blind?C(0xb8b8a8):[.95,.78,.45],0,3,ck!==undefined?0:blind?.15:.35);hb(s*.068,.032,.171,.011,.012,.006,[.05,.01,0],0);hb(s*.16*fatH,.005,-.005,.04,.085,.06,skin)}
+for(const s of[-1,1]){hb(s*.068,.032,.138,.078,.055,.05,C(0x24140f),7);const blind=e.bad===(s>0?1:0)&&ty==='walker';hb(s*.068,.032,.158,.04,.028,.025,blind?C(0xb8b8a8):[.95,.78,.45],0,3,dead?0:blind?.15:.35);hb(s*.068,.032,.171,.011,.012,.006,[.05,.01,0],0);hb(s*.16*fatH,.005,-.005,.04,.085,.06,skin)}
 hb(0,-.012,.162,.045,.085,.062,skin,7,4);hb(-.012,-.038,.177,.014,.012,.01,C(0x1a0c0a),7);hb(.012,-.038,.177,.014,.012,.01,C(0x1a0c0a),7);
 if(gore){hb(e.bad?.095:-.095,-.055,.12,.06,.075,.05,C(0x4e0709),8);hb(0,-.14-open,.14,.07,.045,.02,C(0x4e0709),8)}
 if(ty==='woman'){hb(0,.09,-.02,.36,.27,.37,e.hair,7);hb(0,-.09,-.11,.31,.34,.17,e.hair,7,1);for(const s of[-1,1])hb(s*.15,-.08,.02,.07,.3,.14,e.hair,7,1)}
@@ -1088,13 +1222,18 @@ else if(ty==='soldier'&&e.helmet){hb(0,.14,-.005,.4,.24,.41,C(0x39432a),5);hb(0,
 else if(ty==='runner'){hb(0,.07,-.045,.37,.34,.36,coat,7);hb(0,.17,.07,.3,.06,.2,coat,7)}
 else if(!e.bald&&ty!=='brute'){hb(0,.14,-.035,.31,.13,.31,e.hair,7);hb(.06,.17,.07,.12,.05,.12,e.hair,7)}
 else if(gore){hb(.06,.16,.03,.12,.05,.13,C(0x5a0a0a),8)}
-/* раны от пуль */
-if(e.holes&&gore)for(const o of e.holes){let p;if(o.n==='body')p=off(mid(J.pel,J.neck,.55+o.y*.7),o.x*.45*W*m,0,.165*Math.min(1.35,W)*m);else if(o.n==='head')p=ho(o.x*.2,o.y*.22,.165);else continue;
-box(p[0],p[1],p[2],.065,.065,.03,C(0x4c0305),yaw,0,0,3,8);box(p[0]+sy_*.014,p[1],p[2]+cy_*.014,.026,.026,.014,[.03,0,0],yaw,0,0,3)}}
+if(e.holes&&gore)for(const o of e.holes)if(o.n==='head'){hb(o.x*.2,o.y*.22,.165,.07,.07,.033,C(0x4c0305),8);hb(o.x*.2,o.y*.22,.18,.028,.028,.015,[.03,0,0],0)}})}
+/* шея с головой на теле */
+function drawNeck(e,J){const{m,skin,red,bonec}=zskin(e);const up=J.right?vnorm(vsub(J.neck,J.pel)):[0,1,0];
+if(!e.parts[1].on){ball(J.neck,.16*m,red,8);bone(J.neck,vadd(J.neck,up,.07*m),.05*m,bonec,0);return}
+bone(J.neck,J.head,.12*m,skin);
+if(J.right)drawHead(e,J.head,frame(vsub(J.head,J.neck),J.right),true);
+else drawHead(e,J.head,yawPitch(e.yaw+J.headTilt*.6,(isLow(e)?-.25:.12)-(e.att>.4&&e.att<.75?.2:0)),false)}
+function drawZombie(e){const J=pose(e);drawTorso(e,J);for(let i=0;i<2;i++){drawArm(e,J,i);drawLeg(e,J,i)}drawNeck(e,J)}
 function drawWorld(t,ex,ez,sy,cy,range){
 const far=(x,z,r)=>{const dx=x-ex,dz=z-ez,d=dx*dx+dz*dz;return d>r*r||(!depthPass&&d>100&&(-sy*dx-cy*dz)<-6)};
 drawChunks(ex,ez,sy,cy,range);localTex=0;
-if(!depthPass){for(const d of decals)if(!far(d[0],d[2],40))box(d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],0,0,2,8)}
+if(!depthPass){for(const d of decals)if(!far(d[0],d[2],40))box(d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],0,0,2,7)}
 localTex=1;const R40=Math.min(range,45);
 for(const n of nodes){if(far(n.x,n.z,R40))continue;if(n.t==='crate'){const o=n.lid||0;box(n.x,.3,n.z,.8,.58,.7,C(0x8a6a3c),0,0,0,0,3);for(const s of[-.34,.34])box(n.x+s,.3,n.z,.07,.62,.74,C(0x3a2d20),0,0,0,0,5);if(o>.4)box(n.x,.56,n.z,.7,.06,.6,[.05,.035,.02],0,0,0,0,0);
 const a=-o*1.9;box(n.x,.63+Math.sin(-a)*.33,n.z-.35+Math.cos(a)*.35,.86,.08,.74,C(0x56642f),0,a,0,0,3);if(!n.taken){box(n.x,.68,n.z+.2,.16,.03,.1,C(0xc8a040),0,0,.35,0,10);box(n.x,.4,n.z+.36,.26,.2,.02,C(0xd8d0b0));box(n.x,.4,n.z+.373,.2,.035,.01,C(0x8a2018))}}
@@ -1106,11 +1245,8 @@ for(const f of fires){for(let i=0;i<3;i++)box(f.x,.1,f.z,.17,1,.17,C(0x3a2417),i
 for(let i=0;i<14;i++){const q=(t*1.5+i/14)%1,s=.27*(1-q);box(f.x+Math.sin(i*7+t*3)*.22*(1-q),.15+q*1.15,f.z+Math.cos(i*5+t*4)*.22*(1-q),s,s*1.9,s,[1,.78-q*.58,.12*(1-q)],i+t*3,0,1,4)}
 for(let i=0;i<6;i++){const q=(t*.9+i/6)%1;box(f.x+Math.sin(i*11+t)*.5*q,.8+q*2.4,f.z+Math.cos(i*13+t)*.5*q,.03,.03,.03,[1,.55,.1],0,0,1)}}
 for(const e of en)if(!far(e.x,e.z,Math.min(range,48)))drawZombie(e);
-for(const c of corpses){const e=c.e;if(far(e.x,e.z,Math.min(range,48)))continue;const th=isLow(e)?0:c.dir*1.52*c.k*c.k*(3-2*c.k),a=Math.cos(e.yaw),b=Math.sin(e.yaw),ct=Math.cos(th),st_=Math.sin(th);
-/* поворот вокруг ступней: Ry(yaw)*Rx(th)*Ry(-yaw) */
-const A=[a,0,-b,b*st_,ct,a*st_,b*ct,-st_,a*ct],B=[a,0,b,0,1,0,-b,0,a],T_=[0,0,0,0,0,0,0,0,0];for(let i=0;i<3;i++)for(let j=0;j<3;j++)T_[i*3+j]=A[j]*B[i*3]+A[3+j]*B[i*3+1]+A[6+j]*B[i*3+2];
-const sink=c.t<4?(4-c.t)*.12:0;TF={m:T_,px:e.x,py:0,pz:e.z,ox:e.x,oy:Math.abs(st_)*.19*e.m-sink,oz:e.z};drawZombie(e,c.k);TF=null}
-if(!depthPass)for(const c of corpses)if(c.pool){const d=c.pool;box(d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],0,0,2,8)}
+drawBodies(far,range);
+if(!depthPass)for(const c of corpses)if(c.pool){const d=c.pool;box(d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],0,0,2,7)}
 for(const g of gibs){const big=g.s[1]>.3;box(g.x,g.y,g.z,...g.s,g.c,g.a,g.b,0,big?1:g.s[0]>.3?3:1,big||g.s[0]>.3?7:8)}
 }
 let VPm=null;const u_chew=p=>p*38;
